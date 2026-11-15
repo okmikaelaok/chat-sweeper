@@ -608,11 +608,6 @@ dialog button svg {
     color: var(--foreground);
   }
 
-  .ui-select:open {
-    border-color: var(--primary);
-    background: var(--accent);
-  }
-
   .ui-select::picker(select) {
     margin-block: 6px;
     padding: 5px;
@@ -677,6 +672,7 @@ dialog button svg {
 
 .search-wrap input:focus,
 .field select:focus,
+.field select:open,
 .theme-control select:focus {
   border: 1.5px solid var(--primary);
   outline: 2px solid var(--primary);

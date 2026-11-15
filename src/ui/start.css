@@ -972,7 +972,7 @@ dialog a {
 }
 
 .about-tagline {
-  color: var(--primary);
+  color: var(--welcome-accent);
   font-weight: 600;
 }
 
