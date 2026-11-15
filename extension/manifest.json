@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "ChatSweeper",
   "short_name": "ChatSweeper",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Select. Manage. Keep or Sweep. Find, protect and delete Gemini and ChatGPT chats with visible progress.",
   "author": "Mikaela Marie Punzalan",
   "homepage_url": "https://github.com/okmikaelaok/chat-sweeper",

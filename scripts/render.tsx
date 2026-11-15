@@ -3,7 +3,6 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { readFileSync } from 'node:fs';
 import { Search, X, ShieldCheck, ShieldOff, Trash2, RefreshCw, Square, Monitor, Sun, Moon, ExternalLink, MessageSquare, ChevronLeft, ChevronRight, Info, Layers, ListChecks, Calendar, ArrowDownAZ, ArrowDownZA, SquareCheck } from 'lucide-react';
 import { Button } from '../src/ui/components/ui/button';
-import { Card, CardContent } from '../src/ui/components/ui/card';
 import { Input } from '../src/ui/components/ui/input';
 import { Select } from '../src/ui/components/ui/select';
 
@@ -20,14 +19,14 @@ const sortOptions = [
   {value: 'az', label: 'Title A–Z', icon: ArrowDownAZ},
   {value: 'za', label: 'Title Z–A', icon: ArrowDownZA},
 ];
-const Theme = () => <label className="theme-control"><Monitor/><span className="sr-only">Colour theme</span><Select id="theme" aria-label="Colour theme" defaultValue="system" options={[
+export const Theme = () => <label className="theme-control"><Monitor/><span className="sr-only">Colour theme</span><Select id="theme" aria-label="Colour theme" defaultValue="system" options={[
   {value: 'system', label: 'System', icon: Monitor},
   {value: 'light', label: 'Light', icon: Sun},
   {value: 'dark', label: 'Dark', icon: Moon},
 ]}/></label>;
 const brandIcon = 'data:image/png;base64,' + readFileSync('extension/assets/icon-128.png').toString('base64');
-const BrandIcon = () => <img src={brandIcon} alt="" className="brand-icon" width="32" height="32"/>;
-function AboutDialog() {
+export const BrandIcon = () => <img src={brandIcon} alt="" className="brand-icon" width="32" height="32"/>;
+export function AboutDialog() {
   return <dialog id="aboutDialog" aria-labelledby="aboutTitle">
     <div className="about-heading"><div className="brand-mark"><BrandIcon/></div><h2 id="aboutTitle">About ChatSweeper</h2><Button id="aboutClose" variant="outline" size="icon" aria-label="Close About"><X/></Button></div>
     <p className="about-tagline">Select. Manage. Keep or Sweep.</p>
@@ -70,9 +69,5 @@ function Shell({site}: {site:string}) {
     <AboutDialog/>
   </>;
 }
-function Start() {
-  return <main className="welcome"><div className="welcome-top"><a className="wordmark" href="https://github.com/okmikaelaok/chat-sweeper" target="_blank" rel="noreferrer"><BrandIcon/>ChatSweeper</a><Theme/></div><div className="welcome-body"><h1>Manage Gemini and ChatGPT chats</h1><p className="welcome-subtitle">Select. Manage. Keep or Sweep.</p><p className="welcome-description">Search, protect and delete chats.</p><div className="site-cards">{[['Gemini','https://gemini.google.com/app'],['ChatGPT','https://chatgpt.com/']].map(([site,url]) => <Card key={site}><CardContent className="site-card-content"><div className="site-card-icon"><MessageSquare/></div><h2>{site}</h2><p>Open your sidebar, then select ChatSweeper.</p><Button asChild><a href={url}>Open {site}<ExternalLink/></a></Button></CardContent></Card>)}</div><div className="feature-strip"><span><Search/>Search and filter</span><span><ShieldCheck/>Protect chats</span><span><Trash2/>Deletion progress</span></div></div><footer className="welcome-footer"><span>Select. Manage. Keep or Sweep.</span><Button id="about" variant="outline"><Info/>About ChatSweeper</Button></footer><AboutDialog/></main>;
-}
 export const shells = Object.fromEntries(['Gemini','ChatGPT'].map(site => [site,renderToStaticMarkup(<Shell site={site}/>)]));
-export const startMarkup = renderToStaticMarkup(<Start/>);
 export const icons = Object.fromEntries(Object.entries({shield:ShieldCheck}).map(([name, Icon]) => [name,renderToStaticMarkup(<Icon aria-hidden="true"/>)]));

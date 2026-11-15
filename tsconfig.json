@@ -27,6 +27,7 @@
   },
   "include": [
     "src/ui",
-    "scripts/render.tsx"
+    "scripts/render.tsx",
+    "scripts/start.tsx"
   ]
 }

@@ -40,5 +40,13 @@ for (const file of ['content.js','background.js','dates.js','sites.js','protecti
 if (packageInfo.name !== 'chatsweeper' || packageInfo.license !== 'GPL-3.0-only') throw new Error('Unexpected package metadata');
 const license = await readFile('LICENSE','utf8');
 if (!license.includes('Version 3, 29 June 2007') || license.length < 30000) throw new Error('Missing full GPLv3 license');
+const fallbackHtml = await readFile('extension/start.html','utf8');
+const fallbackStyles = await readFile('extension/assets/start.css','utf8');
+const panelStyles = await readFile('extension/assets/styles.css','utf8');
+const uiSource = await readFile('extension/ui.js','utf8');
+const panelUI = JSON.parse(uiSource.slice('globalThis.ChatSweeperUI = '.length).trim().replace(/;$/, ''));
+if (!fallbackHtml.includes('href="assets/start.css"') || fallbackHtml.includes('href="assets/styles.css"')) throw new Error('Fallback must load its own stylesheet');
+if (panelUI.styles !== panelStyles) throw new Error('Panel must embed only its own stylesheet');
+if (/\.welcome-hero\b|\.carousel-slide\b/.test(panelStyles) || /#panel\b/.test(fallbackStyles)) throw new Error('Panel and fallback stylesheet rules are mixed');
 console.log(`${checks} browser checks; manifest, asset paths and permission checks passed.`);
 if (failed) process.exit(1);

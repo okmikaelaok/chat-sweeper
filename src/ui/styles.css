@@ -355,11 +355,11 @@ dialog::backdrop {
 
 :root[data-theme=dark],
 :host([data-theme=dark]) {
-  --background: #1C1C26;
-  --card: #252530;
-  --border: #4A4858;
-  --primary: #302740;
-  --accent: #A78BFA;
+  --background: #0B0B10;
+  --card: #18181F;
+  --border: #30303B;
+  --primary: #A78BFA;
+  --accent: #302740;
   --foreground: #F4F4F5;
   --muted-foreground: #A1A1AA;
   --destructive: #FB7185;

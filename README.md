@@ -1,7 +1,7 @@
 <div align="center">
   <img src="extension/assets/icon-128.png" width="64" height="64" alt="ChatSweeper icon">
   <h1>ChatSweeper</h1>
-  <p><strong>v0.1.0</strong> · Early release</p>
+  <p><strong>v0.1.1</strong> · Early release</p>
   <p><strong>Select. Manage. Keep or Sweep.</strong></p>
   <p>Find, organise and delete Gemini and ChatGPT chats from one panel.</p>
   <p><a href="#gallery">Gallery</a> · <a href="#install">Install</a> · <a href="docs/USAGE.md">Usage</a> · <a href="docs/DEVELOPMENT.md">Development</a> · <a href="LICENSE">GPLv3</a></p>

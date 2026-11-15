@@ -1,6 +1,6 @@
 globalThis.ChatSweeperTheme = {
-  mount(target, select, onError = () => {}) {
-    const key = 'chatsweeper:theme', media = matchMedia('(prefers-color-scheme: dark)');
+  mount(target, select, onError = () => {}, {key = 'chatsweeper:theme'} = {}) {
+    const media = matchMedia('(prefers-color-scheme: dark)');
     let mode = 'system', revision = 0;
     const valid = value => ['system', 'light', 'dark'].includes(value) ? value : 'system';
     function apply() {
