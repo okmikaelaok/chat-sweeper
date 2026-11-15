@@ -1,0 +1,78 @@
+<!doctype html><meta charset="utf-8"><title>ChatSweeper date filter tests</title>
+<body><pre id="result">RUNNING</pre><nav aria-label="Chat history">
+<div class="conversation-items-container"><div class="conversation" data-test-id="conversation" data-conversation-id="date-a"><span class="conversation-title">First chat</span></div><time id="first-date"></time></div>
+<div class="conversation-items-container"><div class="conversation" data-test-id="conversation" data-conversation-id="date-b"><span class="conversation-title">Older chat</span></div><time id="second-date"></time></div>
+<div class="conversation-items-container"><div class="conversation" data-test-id="conversation" data-conversation-id="date-c"><span class="conversation-title">Undated chat</span></div><time id="third-date"></time></div>
+</nav>
+<script>globalThis.chrome = { runtime: { onMessage: { addListener() {} } } };</script>
+<script src="storage.js"></script><script src="../extension/protection.js"></script><script src="../extension/dates.js"></script><script src="../extension/sites.js"></script>
+<script>const originalForLocation = ChatSites.forLocation; ChatSites.forLocation = () => originalForLocation(new URL('https://gemini.google.com/'));</script>
+<script src="../extension/ui.js"></script><script src="../extension/theme.js"></script><script src="../extension/dialogs.js"></script><script src="../extension/content.js"></script>
+<script>
+(async () => {
+  const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
+  const wait = async check => { for (let i=0;i<100;i++) { if (check()) return; await pause(50); } throw new Error('Date test timed out'); };
+try {
+  let checks = 0;
+  const assert = (ok, message) => { if (!ok) throw new Error(message); checks++; };
+  assert(ChatDates.parse('2024-02-29') === '2024-02-29', 'Leap date');
+  assert(ChatDates.parse('2025-02-29') === null, 'Invalid date');
+  assert(ChatDates.parse('yesterday') === null, 'No guessed relative dates');
+  assert(ChatDates.parse('01/02/2025') === null, 'No ambiguous dates');
+  assert(ChatDates.parse('2025-06-01T12:00:00Z') !== null, 'ISO timestamp');
+  assert(ChatDates.parse('1748779200') !== null, 'Unix seconds');
+  const rows = [{date:null},{date:'2025-02-01'},{date:'2024-01-01'}];
+  assert([...rows].sort((a,b) => ChatDates.compare(a,b,'oldest')).map(c=>c.date).join() === '2024-01-01,2025-02-01,', 'Oldest sort, unknown last');
+  assert([...rows].sort((a,b) => ChatDates.compare(a,b,'newest')).map(c=>c.date).join() === '2025-02-01,2024-01-01,', 'Newest sort, unknown last');
+  const row = document.createElement('div'); row.innerHTML = '<span>2020-01-01</span><time datetime="2025-05-01"></time>';
+  assert(ChatDates.read(row) === '2025-05-01', 'Reads explicit row metadata');
+  row.innerHTML = '<span>2020-01-01</span>';
+  assert(ChatDates.read(row) === null, 'Ignores text dates');
+  const ui = document.getElementById('chatsweeper-root').shadowRoot;
+  ui.getElementById('launch').click();
+  assert(ui.getElementById('sort').querySelector('[value=oldest]'), 'Oldest option present');
+  assert(ui.getElementById('sort').querySelector('[value=newest]'), 'Newest option present');
+  assert(!ui.getElementById('from') && !ui.getElementById('dateDetails'), 'Dedicated date inputs omitted');
+  const $ = id => ui.getElementById(id);
+  const change = (id,value) => { $(id).value = value; $(id).dispatchEvent(new Event('input')); };
+  const titles = () => [...$('list').querySelectorAll('.chat a')].map(a => a.firstChild.textContent).join('|');
+  await wait(() => $('status').textContent === 'Protected chats excluded.');
+  const sidebarOrder = titles();
+  for (const sort of ['newest','oldest']) {
+    change('sort',sort);
+    assert(titles() === sidebarOrder, 'Missing dates preserve discovery order for ' + sort);
+    assert($('status').textContent === 'No dates; using discovery order.', 'Missing dates are explained beside Status');
+    assert(!$('scan').disabled, 'Date sorting does not start a scan');
+  }
+  assert([...$('list').querySelectorAll('.chat-date')].every(el => el.textContent === 'Date unknown'), 'No dates are invented from titles or sidebar positions');
+  $('scan').click(); await wait(() => !$('scan').disabled);
+  assert($('status').textContent === 'No new chats found.' && !$('status').textContent.includes('expand'), 'A visible short sidebar is not reported as collapsed');
+  change('sort','newest');
+  assert($('status').textContent === 'No dates; using discovery order.', 'Sorting replaces the previous scan notice with date availability');
+  document.getElementById('first-date').setAttribute('datetime','2025-02-01');
+  document.getElementById('second-date').setAttribute('datetime','2024-01-01');
+  await wait(() => $('status').textContent.includes('2/3'));
+  assert(titles() === 'First chat|Older chat|Undated chat', 'Late timestamps are discovered automatically and unknown dates sort last');
+  change('sort','oldest');
+  assert(titles() === 'Older chat|First chat|Undated chat', 'Oldest sorting uses newly supplied dates');
+  document.getElementById('second-date').setAttribute('datetime','2026-01-01');
+  await wait(() => titles() === 'First chat|Older chat|Undated chat');
+  assert($('list').textContent.includes('Date: 2026-01-01'), 'Changed timestamp attributes refresh without other sidebar mutations');
+  change('search','Undated');
+  assert($('status').textContent === 'No dates; using discovery order.', 'Date coverage refers to matching chats rather than unrelated rows');
+  change('search','no matching title');
+  assert($('status').textContent === '', 'An empty result has no misleading date-availability notice');
+  change('search','');
+  document.getElementById('third-date').setAttribute('data-created-at','2023-01-01');
+  change('sort','oldest');
+  assert(titles() === 'Undated chat|First chat|Older chat' && $('status').textContent.includes('3/3'), 'Changing sort rereads current metadata before the observer runs');
+  change('sort','az');
+  assert($('status').textContent === '', 'Title sorting clears the date notice');
+  await chrome.storage.local.set({'chat-manager:protected:gemini:date-a':true});
+  const protectionStatus = $('status').textContent;
+  change('sort','newest');
+  assert(protectionStatus.includes('Protection changed') && $('status').textContent.includes('3/3'), 'Sorting replaces an earlier protection notice with date availability');
+  document.getElementById('result').textContent = `PASS: ${checks} date and UI checks`;
+} catch (error) { document.getElementById('result').textContent = 'FAIL: ' + error.stack; }
+})();
+</script>

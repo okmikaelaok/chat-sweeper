@@ -1,0 +1,26 @@
+# Dependencies, portable tools and browser test profiles
+node_modules/
+.tools/
+.chrome*/
+
+# Release archives and diagnostics
+dist/
+*.zip
+*.log
+*-output.txt
+*-errors.txt
+date-test-*.txt
+coverage/
+
+# Local configuration and secrets (keep lockfiles and example config)
+.env
+.env.*
+!.env.example
+.npmrc
+
+# Editor and operating-system files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+Desktop.ini

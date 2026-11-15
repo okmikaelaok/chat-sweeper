@@ -1,0 +1,98 @@
+<!doctype html><meta charset="utf-8"><title>ChatSweeper live discovery tests</title>
+<body><pre id="result">RUNNING</pre>
+<nav id="sidebar" aria-label="Chat history" style="height:110px;width:240px;overflow-y:auto"><div id="rows" style="padding-bottom:800px"></div></nav><main id="messages"></main>
+<script>
+globalThis.chrome={runtime:{onMessage:{addListener(){}}}};
+const provider=new URLSearchParams(location.search).get('site')||'chatgpt';
+const origin=provider==='gemini'?'https://gemini.google.com':'https://chatgpt.com';
+const chatUrl=id=>origin+(provider==='gemini'?'/app/':'/c/')+id;
+function entry(id,title,{first=false, attach=true}={}) {
+  const wrap=document.createElement('div');wrap.style.minHeight='42px';
+  wrap.className=provider==='gemini'?'conversation-items-container':'conversation';
+  wrap.setAttribute('data-testid','history-item-'+id);
+  const item=document.createElement(provider==='gemini'?'div':'a');
+  const text=document.createElement('span');text.className=provider==='gemini'?'conversation-title':'truncate';text.textContent=title;item.append(text);
+  if(provider==='gemini') {item.setAttribute('data-test-id','conversation');item.className='conversation';item.setAttribute('jslog','["c_'+id+'"]');}
+  else item.href=chatUrl(id);
+  wrap.append(item);
+  if(attach) first?document.getElementById('rows').prepend(wrap):document.getElementById('rows').append(wrap);
+  return {wrap,item,text};
+}
+const original=entry('initial','Initial chat');entry('second','Second chat');entry('third','Third chat');
+</script>
+<script src="storage.js"></script><script src="../extension/sites.js"></script>
+<script>const forLocation=ChatSites.forLocation;ChatSites.forLocation=()=>forLocation(new URL(origin));</script>
+<script src="../extension/dates.js"></script><script src="../extension/protection.js"></script><script src="../extension/ui.js"></script><script src="../extension/theme.js"></script><script src="../extension/dialogs.js"></script><script src="../extension/content.js"></script>
+<script>
+(async()=>{
+ let checks=0;const assert=(ok,message)=>{if(!ok)throw new Error(message);checks++;};
+ const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+ const wait=async check=>{for(let i=0;i<150;i++){if(check())return;await pause(50);}throw new Error('Discovery test timed out');};
+ let streaming, scrollMonitor;
+ try {
+  const root=document.getElementById('chatsweeper-root').shadowRoot, $=id=>root.getElementById(id);
+  const titles=()=>[...$('list').querySelectorAll('.chat a')].map(a=>a.firstChild.textContent);
+  $('launch').click();await wait(()=>$('count').textContent==='3');
+  assert(titles()[0]==='Initial chat','Initial sidebar order is preserved');
+  original.text.firstChild.data='Title changed without replacing a node';
+  await wait(()=>titles().includes('Title changed without replacing a node'));
+  assert($('count').textContent==='3','Character-data title updates do not create duplicates');
+  let streamingActive=true;
+  streaming=setInterval(()=>document.getElementById('messages').replaceChildren(document.createTextNode('streaming '+Date.now())),20);
+  setTimeout(()=>{clearInterval(streaming);streamingActive=false;},1800);
+  original.text.firstChild.data='Saved new chat';
+  if(provider==='gemini') original.item.setAttribute('jslog','["c_saved-new"]');
+  else original.item.setAttribute('href',chatUrl('saved-new'));
+  await wait(()=>$('count').textContent==='4' && titles().includes('Saved new chat'));
+  assert(streamingActive,'Attribute updates are detected while unrelated messages continue streaming');
+  assert($('list').querySelector('.chat a').href===chatUrl('saved-new'),'A newly assigned chat ID is visible on the first page');
+  clearInterval(streaming);
+  entry('just-added','A newly inserted chat',{first:true});
+  await wait(()=>$('count').textContent==='5');
+  assert(titles()[0]==='A newly inserted chat','A newly inserted recent row is detected without closing the panel');
+  $('launch').click();const hidden=entry('while-hidden','Chat created with panel closed',{first:true});window.dispatchEvent(new Event('focus'));await pause(300);
+  $('launch').click();
+  assert($('count').textContent==='6' && titles()[0]==='Chat created with panel closed','Reopening refreshes current sidebar entries');
+  const sidebar=document.getElementById('sidebar'), rows=document.getElementById('rows');
+  sidebar.scrollTop=600;await pause(80);
+  const before=Number($('count').textContent);let scanMode=true, topRequested=false, olderRequested=false, priorityWorked=false, olderPosition=0;
+  const phases=[];
+  const handleScanScroll=()=>{
+   if(!scanMode)return;
+   if(sidebar.scrollTop<=1 && !topRequested){
+    topRequested=true;phases.push('new');
+    setTimeout(()=>entry('top-check','New chat mounted at the top',{first:true}),300);
+   } else if(sidebar.scrollTop>1 && topRequested && !olderRequested) {
+    olderRequested=true;olderPosition=sidebar.scrollTop;phases.push('older');
+    priorityWorked=Number($('count').textContent)>=before+1 && titles()[0]==='New chat mounted at the top';
+    entry('older-history','Older chat loaded later');
+    $('stop').click();
+   }
+  };
+  sidebar.addEventListener('scroll',handleScanScroll);
+  // Virtual-time Chrome may coalesce native scroll events; sample the fixture's scroll position too.
+  scrollMonitor=setInterval(handleScanScroll,25);
+  $('scan').click();
+  assert($('status').textContent.includes('Checking for new chats'),'Load more reports its new-chat phase first');
+  await wait(()=>olderRequested && !$('scan').disabled);scanMode=false;clearInterval(scrollMonitor);
+  assert(phases.join()==='new,older','The top is visited before older history');
+  assert(olderPosition>=600,'Older-history scanning resumes from the previous position after checking recent chats');
+  assert(priorityWorked,'Delayed recent rows are indexed and rendered before scrolling toward older history');
+  assert(Number($('count').textContent)===before+2,'Recent and older entries are both retained');
+  assert($('status').textContent==='Scan stopped.','Stop remains available during the scan');
+  sidebar.style.height='auto';rows.style.paddingBottom='0';
+  entry('short-list','New chat in a non-scrollable list',{first:true});
+  $('scan').click();await wait(()=>!$('scan').disabled);
+  assert(titles()[0]==='New chat in a non-scrollable list','Load more checks new rows even without a scrollable list');
+  assert($('status').textContent === 'Found 1 new chat.','Non-scrollable lists finish the new-chat check without an error');
+  assert($('list').querySelectorAll('.chat').length<=50,'Live updates retain the 50-row rendering limit');
+  assert(!$('status').textContent.includes('expand'),'A visible short sidebar does not ask the user to expand it');
+  $('scan').click();await wait(()=>!$('scan').disabled);
+  assert($('status').textContent==='No new chats found.','Repeated checks clearly report that no additional chats were found');
+  $('sort').value='oldest';$('sort').dispatchEvent(new Event('input'));
+  assert($('status').textContent==='No dates; using discovery order.','Sorting replaces a scan notice with the date explanation');
+  document.getElementById('result').textContent='PASS: '+checks+' '+provider+' live discovery checks';
+ } catch(error) {document.getElementById('result').textContent='FAIL: '+error.stack;}
+ finally {clearInterval(streaming);clearInterval(scrollMonitor);}
+})();
+</script>

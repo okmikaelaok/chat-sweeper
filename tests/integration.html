@@ -1,0 +1,321 @@
+<!doctype html><meta charset="utf-8"><title>ChatSweeper integration tests</title>
+<body><pre id="result">RUNNING</pre><nav aria-label="Chat history" id="fixture"></nav><main id="main"></main>
+<script>
+let toolbarHandler, toolbarCalls = [], contentMessageHandler;
+globalThis.chrome = {
+  runtime: { onMessage: { addListener(handler) { contentMessageHandler = handler; } }, getURL: path => 'chrome-extension://fixture/' + path },
+  action: { onClicked: { addListener(handler) { toolbarHandler = handler; } } },
+  tabs: {
+    async sendMessage(id, message) { toolbarCalls.push(['message', id, message.type]); if (id === 404) throw new Error('No content script'); },
+    async reload(id) { toolbarCalls.push(['reload', id]); },
+    async create(options) { toolbarCalls.push(['create', options.url]); }
+  }
+};
+const provider = new URLSearchParams(location.search).get('site') || 'chatgpt';
+const origin = provider === 'gemini' ? 'https://gemini.google.com' : 'https://chatgpt.com';
+const path = provider === 'gemini' ? '/app/' : '/c/';
+const url = id => origin + path + id;
+let deleted = [], menusOpened = [], confirmations = 0;
+let onChatDialog = null;
+function fixture(id, title, date) {
+  const row = document.createElement('div'); row.className = provider === 'gemini' ? 'conversation-items-container' : 'conversation'; row.dataset.testid = 'history-item-' + id;
+  const a = document.createElement(provider === 'gemini' ? 'div' : 'a');
+  if (provider === 'gemini') {
+    a.className = 'conversation'; a.setAttribute('data-test-id','conversation'); a.setAttribute('role','button');
+    const text = document.createElement('span'); text.className='conversation-title'; text.textContent=title; a.append(text);
+    if (id === 'second') a.setAttribute('data-conversation-id',id);
+    else if (id === 'unknown') a.id = 'c_' + id;
+    else a.setAttribute('jslog','12345; metadata:["c_' + id + '"]');
+  } else { a.href = url(id); a.textContent = title; }
+  const time = document.createElement('time'); if (date) time.setAttribute('datetime', date);
+  const menu = document.createElement('button'); menu.setAttribute('aria-label', 'Open conversation options'); menu.setAttribute('aria-haspopup', 'menu');
+  if (provider === 'gemini') { menu.removeAttribute('aria-label'); menu.removeAttribute('aria-haspopup'); menu.setAttribute('data-test-id','actions-menu-button'); }
+  menu.onclick = () => {
+    menusOpened.push(id);
+    const popup = document.createElement('div'); popup.setAttribute('role', 'menu'); popup.id = 'menu-' + id;
+    menu.setAttribute('aria-controls', popup.id);
+    const archive = document.createElement('button'); archive.setAttribute('role','menuitem'); archive.textContent = 'Archive'; archive.onclick = () => { throw new Error('Archive must never be used'); };
+    const remove = document.createElement('button'); remove.setAttribute('role', 'menuitem'); remove.textContent = 'Delete';
+    if (provider === 'gemini') { const icon = document.createElement('mat-icon'); icon.textContent = 'delete'; remove.prepend(icon); }
+    remove.onclick = () => {
+      popup.remove(); const dialog = document.createElement('div'); dialog.setAttribute('role', provider === 'gemini' ? 'dialog' : 'alertdialog');
+      const title = document.createElement('h2'); title.textContent = 'Delete chat?';
+      const cancel = document.createElement('button'); cancel.textContent = 'Cancel'; cancel.onclick = () => dialog.remove();
+      const confirm = document.createElement('button'); confirm.textContent = 'Delete';
+      confirm.onclick = () => { confirmations++; deleted.push(id); row.remove(); dialog.remove(); };
+      dialog.append(title,cancel,confirm); document.body.append(dialog);
+      if (onChatDialog) onChatDialog();
+    };
+    popup.append(archive,remove); document.body.append(popup);
+  };
+  row.append(a,time,menu); document.getElementById('fixture').append(row); return {row,a,menu};
+}
+const first = fixture('first', 'First dated chat', '2025-02-01');
+const second = fixture('second', 'Older dated chat', '2024-01-01');
+const unknown = fixture('unknown', 'No date', null);
+document.getElementById('main').innerHTML = `<a href="${url('main-link')}">A chat link in a message</a>`;
+</script>
+<script src="storage.js"></script><script src="../extension/protection.js"></script><script src="../extension/dates.js"></script><script src="../extension/sites.js"></script>
+<script>
+const original = ChatSites.forLocation;
+const adapter = original(new URL(origin));
+ChatSites.forLocation = () => adapter;
+</script>
+<script src="../extension/ui.js"></script><script src="../extension/theme.js"></script><script src="../extension/dialogs.js"></script><script src="../extension/content.js"></script>
+<script src="../extension/background.js"></script>
+<script>
+(async () => {
+  let checks = 0;
+  const assert = (ok, message) => { if (!ok) throw new Error(message); checks++; };
+  const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
+  const wait = async check => { for (let i=0;i<100;i++) { if (check()) return; await pause(50); } throw new Error('Test timed out'); };
+  try {
+    const gpt = original(new URL('https://chatgpt.com'));
+    const gemini = original(new URL('https://gemini.google.com'));
+    assert(!original(new URL('https://example.com')), 'Unsupported site rejected');
+    assert(!original(new URL('http://chatgpt.com')), 'HTTP rejected');
+    assert(gpt.id({href:'https://chatgpt.com/c/abc-123'}) === 'abc-123', 'ChatGPT chat ID');
+    assert(gpt.id({href:'https://chatgpt.com/g/g-project/c/abc'}) === 'abc', 'Project chat ID');
+    assert(!gpt.id({href:'https://chatgpt.com/share/abc'}), 'Shared links excluded');
+    assert(!gpt.id({href:'https://example.com/c/abc'}), 'Cross-origin links excluded');
+    assert(original(new URL('https://chat.openai.com')).id({href:'https://chat.openai.com/c/abc'}) === 'abc', 'Legacy ChatGPT hostname');
+    assert(gemini.id({href:'https://gemini.google.com/u/1/app/abc'}) === 'abc', 'Gemini account path');
+    assert(adapter.links().length === 3, 'Only sidebar chats discovered');
+    assert(adapter.menu(first.a) === first.menu, 'Menu belongs to the selected row');
+    if (provider === 'gemini') {
+      assert(adapter.id(first.a)==='first' && adapter.id(second.a)==='second' && adapter.id(unknown.a)==='unknown', 'Non-link Gemini IDs are read from jslog, data attributes and DOM IDs');
+      assert(adapter.url(first.a)==='https://gemini.google.com/app/first', 'Non-link rows have usable chat URLs');
+      const account=original(new URL('https://gemini.google.com/u/2/app'));
+      assert(account.urlForId('abc')==='https://gemini.google.com/u/2/app/abc', 'Gemini account-specific URLs are preserved');
+      assert(adapter.id({href:'https://gemini.google.com/conversation/legacy'})==='legacy', 'Alternative chat paths are supported');
+      const noId=document.createElement('div');noId.setAttribute('data-test-id','conversation');noId.innerHTML='<span class="conversation-title">A title without an ID</span>';document.getElementById('fixture').append(noId);
+      assert(adapter.id(noId)===null && !adapter.links().includes(noId), 'Titles never become unsafe synthetic IDs');
+      assert(adapter.emptyMessage().includes('identifiers could not be read'), 'Unsupported rows produce an explicit diagnostic');
+      noId.setAttribute('jslog','metadata:["c_one","c_two"]');
+      assert(adapter.id(noId)===null, 'Conflicting metadata is rejected');noId.remove();
+      const duplicate=document.createElement('a');duplicate.href=url('first');first.a.append(duplicate);
+      assert(adapter.links().length===3, 'Link and non-link representations are deduplicated');duplicate.remove();
+    }
+
+    const ambiguous = document.createElement('div'); ambiguous.className = 'conversation';
+    ambiguous.innerHTML = `<a href="${url('ambiguous-a')}">A</a><a href="${url('ambiguous-b')}">B</a><button aria-haspopup="menu">Options</button>`;
+    document.getElementById('fixture').append(ambiguous);
+    assert(adapter.menu(ambiguous.querySelector('a')) === null, 'Ambiguous row cannot be deleted'); ambiguous.remove();
+    const ui = document.getElementById('chatsweeper-root').shadowRoot;
+    const $ = id => ui.getElementById(id);
+    $('launch').click();
+    await wait(() => $('status').textContent === 'Protected chats excluded.');
+    assert($('panel').getAttribute('aria-label') === 'ChatSweeper for ' + adapter.name, 'Provider name rendered');
+    assert($('count').textContent === '3', 'Count is per provider sidebar');
+    contentMessageHandler({type:'toggle-manager'});assert($('panel').hidden, 'Toolbar message closes the panel');
+    contentMessageHandler({type:'toggle-manager'});assert(!$('panel').hidden, 'Toolbar message opens the panel');
+
+    const listTitles = () => [...$('list').querySelectorAll('.chat a')].map(a => a.firstChild.textContent);
+    const change = (id,value) => { $(id).value = value; $(id).dispatchEvent(new Event('input')); };
+    change('search','First');
+    $('list').querySelector('.lock').click(); await wait(() => $('list').getAttribute('aria-busy') === 'false');
+    assert($('list').querySelector('input').disabled, 'Protect prevents selecting the chat for deletion');
+    change('filter','protected');
+    assert(listTitles().join() === 'First dated chat' && !$('savedProtection'), 'Protected chats use the same single list');
+    $('list').querySelector('.lock').click(); await wait(() => $('list').getAttribute('aria-busy') === 'false');
+    change('filter','all'); change('search','');
+    $('about').click();
+    assert($('aboutDialog').open && $('aboutDialog').textContent.includes('Mikaela Marie Punzalan') && $('aboutDialog').textContent.includes('GPLv3'), 'About dialog exposes author and license');
+    assert(getComputedStyle($('aboutDialog'),'::backdrop').backdropFilter==='none', 'About backdrop has no blur');
+    const aboutBounds=$('aboutDialog').getBoundingClientRect(), aboutTrigger=$('about').getBoundingClientRect(), panelBounds=$('panel').getBoundingClientRect();
+    assert(aboutBounds.top>=aboutTrigger.bottom+7 && aboutBounds.top<=aboutTrigger.bottom+9, 'About is anchored immediately below its button');
+    assert(aboutBounds.left>=panelBounds.left && aboutBounds.right<=panelBounds.right, 'About overlays the ChatSweeper panel horizontally');
+    assert(aboutBounds.bottom<=innerHeight && aboutBounds.left>=0, 'About stays within the viewport');
+    window.dispatchEvent(new Event('resize'));
+    assert(Math.abs($('aboutDialog').getBoundingClientRect().top-aboutTrigger.bottom-8)<1, 'About stays anchored after resize');
+
+    assert($('aboutDialog').querySelector('.about-source').href === 'https://github.com/okmikaelaok/chat-sweeper', 'About links to the exact source repository');
+    assert(!$('panel').textContent.includes('Mikaela Marie Punzalan'), 'Author name is omitted from the panel footer');
+    $('aboutClose').click(); await pause(0);
+    assert(!$('aboutDialog').open, 'About closes without changing selection');
+    change('sort','oldest'); assert(listTitles().join('|') === 'Older dated chat|First dated chat|No date', 'Oldest first, unknown last');
+    change('sort','newest'); assert(listTitles().join('|') === 'First dated chat|Older dated chat|No date', 'Newest first, unknown last');
+    assert(!$('from') && !$('dateDetails'), 'Separate date filters are removed');
+    change('search','First');
+    $('list').querySelector('input').click();
+    $('list').querySelector('.lock').click();
+    await wait(() => $('list').getAttribute('aria-busy') === 'false');
+    assert($('list').querySelector('input').disabled, 'Protected chat cannot be selected');
+    assert($('selection').textContent==='0', 'Protecting a selected chat deselects it');
+    $('all').click(); assert($('selection').textContent==='0', 'Select filtered skips protected chats');
+    const persisted = ChatProtection.create(adapter.name.toLowerCase(), () => {}); await persisted.refresh();
+    assert(persisted.has('first'), 'Protection survives a new store instance');
+    const otherSite = ChatProtection.create(adapter.name === 'ChatGPT' ? 'gemini' : 'chatgpt', () => {}); await otherSite.refresh();
+    assert(!otherSite.has('first'), 'Protection is separate for each provider');
+    $('list').querySelector('.lock').click(); await wait(() => $('list').getAttribute('aria-busy') === 'false');
+    assert(!$('list').querySelector('input').disabled, 'Unprotect restores selection');
+    const findRow = id => [...$('list').querySelectorAll('.chat')].find(row => row.dataset.chatId === id);
+    const finished = () => $('stop').disabled && !$('search').disabled;
+    change('search',''); $('all').click(); change('search','First');
+    assert($('selection').textContent === '3' && $('deleteLabel').textContent === 'Delete selected chats', 'The selected count includes chats outside the current view');
+    assert(!$('confirm') && !$('previewList'), 'Deletion has no extension preview overlay');
+    assert(findRow('first').querySelector('.chat-id').textContent === 'ID: first', 'Chat IDs are visible in the regular list');
+    await chrome.storage.local.set({['chat-manager:protected:' + adapter.name.toLowerCase() + ':unknown']:true});
+    assert($('selection').textContent === '2' && confirmations === 0, 'Cross-tab protection updates the eligible count without deleting');
+    await chrome.storage.local.remove('chat-manager:protected:' + adapter.name.toLowerCase() + ':unknown');
+    change('search',''); $('all').checked = false; $('all').dispatchEvent(new Event('change')); change('search','First');
+    $('list').querySelector('input').click();
+    $('delete').click(); $('stop').click(); await wait(finished);
+    assert(confirmations === 0 && menusOpened.length === 0, 'Immediate Stop cancels before site menus open');
+    assert(findRow('first').querySelector('input').checked && !$('selectionControl').hidden, 'Stopping restores the normal list and preserves pending selection');
+    onChatDialog = () => chrome.storage.local.set({['chat-manager:protected:' + adapter.name.toLowerCase() + ':first']:true});
+    $('delete').click(); await wait(finished);
+    assert(deleted.length === 0 && $('status').textContent.includes('protected'), 'Protection added while native confirmation opens prevents final delete');
+    assert(findRow('first').querySelector('.chat-state').textContent === 'Protected', 'Protection changes remain visible after restoring the list');
+    document.querySelector('[role=dialog], [role=alertdialog]').querySelector('button').click();
+    onChatDialog = null;
+    await chrome.storage.local.remove('chat-manager:protected:' + adapter.name.toLowerCase() + ':first');
+    $('list').querySelector('input').click(); menusOpened = [];
+    $('delete').click(); await wait(finished);
+    assert(deleted.join() === 'first' && menusOpened.join() === 'first', 'Only selected chat deleted through its own menu');
+    assert(!findRow('first') && $('status').textContent === 'Deletion finished.', 'Verified deletion removes the deleted row and reports completion');
+    assert($('deleteLabel').textContent === 'Delete selected chats' && $('count').textContent === '2', 'Completion restores the normal delete action and updates the count');
+    assert(!$('search').disabled && !$('selectionControl').hidden, 'Completion restores controls and Select all automatically');
+    change('search','');
+    $('all').click(); $('delete').click();
+    await wait(() => deleted.length === 2);
+    $('stop').click(); await wait(finished);
+    assert(deleted.length === 2 && $('count').textContent === '1', 'Stop prevents next chat deletion');
+    assert($('list').querySelector('input:checked'), 'Stopped queue entries remain selected for retry');
+    const otherMenu = document.createElement('div'); otherMenu.setAttribute('role','menu'); otherMenu.textContent = 'Unrelated menu'; document.body.append(otherMenu);
+    $('delete').click(); await wait(finished);
+    assert(deleted.length === 2 && $('status').textContent.includes('Close the open'), 'Existing menu blocks deletion');
+    assert($('list').querySelector('input:checked') && !$('search').disabled, 'Failed deletion restores controls and keeps the chat selected');
+    otherMenu.remove();
+    // A labelled button in a multi-chat navigation container must not be chosen.
+    assert(!adapter.links().some(a => a.textContent.includes('message')), 'Message links remain excluded');
+    assert(!$('projects') && !$('projectConfirm'), 'Nonworking project controls are omitted');
+    for (let i=0;i<104;i++) fixture('page-'+i, 'Paged chat '+String(i).padStart(3,'0'), null);
+    $('launch').click(); $('launch').click(); change('sort','sidebar');
+    $('all').checked=false; $('all').dispatchEvent(new Event('change'));
+    assert($('count').textContent==='105' && $('list').querySelectorAll('.chat').length===50, 'Only 50 chats render even when 105 are discovered');
+    assert($('pageInfo').textContent.includes('Page 1 of 3') && $('previousPage').disabled, 'First-page range and controls are correct');
+    $('all').click();
+    assert($('selection').textContent==='50', 'Select this page never selects the undisplayed rows');
+    $('nextPage').click();
+    assert($('list').querySelectorAll('.chat').length===50 && $('pageInfo').textContent.includes('Page 2 of 3'), 'Second page renders its own 50 chats');
+    assert(!$('all').checked, 'Page selection state is independent');
+    assert($('selection').textContent==='50' && $('status').textContent.includes('50 off-page'), 'Status reports selections on other pages');
+    $('nextPage').click();
+    assert($('list').querySelectorAll('.chat').length===5 && $('nextPage').disabled, 'Final partial page has only the remaining chats');
+    change('filter','selected'); $('all').click();
+    assert($('selection').textContent==='0', 'Selected filter can clear a complete page selection');
+    change('filter','all');
+    storageFixture.writeDelayMs = 150;
+    const savedRow = $('list').querySelector('.chat'), savedSibling = savedRow.nextElementSibling;
+    const savedLock = savedRow.querySelector('.lock'), savedTitle = savedRow.querySelector('a');
+    savedLock.focus({preventScroll:true}); $('list').scrollTop = 80;
+    const beforeBounds = savedTitle.getBoundingClientRect(), beforeScroll = $('list').scrollTop;
+    const beforeStatus = $('status').textContent, beforeHeight = $('list').getBoundingClientRect().height;
+    savedLock.click(); await pause(40);
+    assert($('list').querySelector('.chat') === savedRow && savedRow.nextElementSibling === savedSibling, 'Protection saving reuses chat rows');
+    assert(ui.activeElement === savedLock, 'Protection saving preserves button focus');
+    assert(!$('search').disabled && !$('scan').disabled && !$('nextPage').disabled, 'Protection saving keeps the panel controls usable');
+    assert(savedLock.getAttribute('aria-busy') === 'true' && savedLock.getAttribute('aria-disabled') === 'true', 'Pending protection is exposed on its shield button');
+    assert(savedRow.querySelector('input').disabled, 'Pending protection cannot be selected');
+    $('all').click();
+    assert(!savedRow.querySelector('input').checked && $('selection').textContent === '49', 'Select all excludes protection being saved');
+    $('delete').click(); $('scan').click();
+    assert($('deleteLabel').textContent==='Delete selected chats' && $('stop').disabled, 'Deletion and scanning wait for protection saves');
+    await wait(() => $('list').getAttribute('aria-busy') === 'false');
+    assert($('list').querySelector('.chat') === savedRow && ui.activeElement === savedLock, 'Saved protection retains row identity and focus');
+    const protectedBounds = savedTitle.getBoundingClientRect();
+    assert(protectedBounds.x === beforeBounds.x && protectedBounds.width === beforeBounds.width, 'Protected highlight does not shift or resize the title');
+    assert($('list').scrollTop === beforeScroll && $('list').getBoundingClientRect().height === beforeHeight, 'Protection preserves list scroll and height');
+    assert($('status').textContent.includes('Deletion is permanent') && savedRow.classList.contains('protected'), 'Saved protection preserves the selection warning without adding a status box');
+    savedLock.click(); await wait(() => $('list').getAttribute('aria-busy') === 'false');
+    assert(savedRow === $('list').querySelector('.chat') && !savedRow.classList.contains('protected') && savedTitle.getBoundingClientRect().x === beforeBounds.x, 'Unprotect preserves the same row and spacing');
+    storageFixture.writeDelayMs = 0;
+    $('all').checked = false; $('all').dispatchEvent(new Event('change'));
+    const missingKey='chat-manager:protected:'+adapter.name.toLowerCase()+':not-discovered';
+    await chrome.storage.local.set({[missingKey]:true}); change('filter','protected');
+    assert($('list').querySelectorAll('.chat').length===1 && $('list').textContent.includes('not-discovered'), 'Saved but undiscovered protection is available through Show');
+    assert($('count').textContent==='105', 'Saved IDs do not inflate the discovered count');
+    $('list').querySelector('.lock').click(); await wait(() => $('list').getAttribute('aria-busy') === 'false');
+    assert($('list').querySelectorAll('.chat').length===0, 'Saved protection can be removed from the same list');
+    change('filter','all');
+    const longLink = adapter.links().find(link => adapter.id(link)==='page-103');
+    const longTitle = 'Hello '.repeat(24) + 'needle-only-in-full-title';
+    (provider==='gemini' ? longLink.querySelector('.conversation-title') : longLink).textContent = longTitle;
+    change('sort','sidebar'); change('search','needle-only-in-full-title');
+    const longRow = $('list').querySelector('.chat'), longText = longRow.querySelector('.chat-title').textContent;
+    assert(longText.endsWith('...') && Array.from(longText).length<=80, 'Long display titles are limited to 80 characters including the ellipsis');
+    assert(longRow.querySelector('a').title===longTitle && longRow.querySelector('a').getAttribute('aria-label')===longTitle, 'The full title remains available on hover and to assistive technology');
+    assert(longRow.querySelector('.chat-id').textContent==='ID: page-103', 'Title truncation preserves the full chat ID');
+    assert(getComputedStyle(longRow.querySelector('.chat-title')).whiteSpace==='nowrap', 'Long titles do not create tall list rows');
+    change('search','');
+    const firstTarget = $('list').querySelector('.chat').dataset.chatId;
+    const protectedId = $('list').querySelectorAll('.chat')[1].dataset.chatId;
+    findRow(protectedId).querySelector('.lock').click(); await wait(() => $('list').getAttribute('aria-busy')==='false');
+    findRow(firstTarget).querySelector('input').click();
+    $('nextPage').click();
+    const secondTarget = $('list').querySelectorAll('.chat')[8].dataset.chatId;
+    findRow(secondTarget).querySelector('input').click();
+    change('search','Paged chat 090');
+    assert($('selection').textContent === '2', 'Both hidden targets remain selected before starting the queue');
+    const followed = [], beforeBatch = deleted.length;
+    menusOpened = [];
+    onChatDialog = () => {
+      const active = $('list').querySelector('[aria-current=step]');
+      const bounds = active.getBoundingClientRect(), viewport = $('list').getBoundingClientRect();
+      followed.push({id:active.dataset.chatId, visible:bounds.top>=viewport.top-1 && bounds.bottom<=viewport.bottom+1, page:$('pageInfo').textContent});
+      assert(active.dataset.state==='deleting', 'The site confirmation belongs to the visibly active row');
+      assert($('list').querySelectorAll('.chat').length<=50, 'Deletion keeps the 50-row rendering cap');
+      if (active.dataset.chatId===firstTarget) assert(findRow(protectedId).querySelector('.chat-state').textContent==='Protected · skipped', 'Protected neighbours are visibly labelled skipped');
+    };
+    $('delete').click();
+    assert(!$('confirm') && !$('stop').disabled, 'Direct deletion starts the queue with Stop available and no extension overlay');
+    await wait(finished); onChatDialog = null;
+    assert(deleted.length===beforeBatch+2 && menusOpened.join()===[firstTarget,secondTarget].join(), 'Only the two selected IDs are deleted; protected and unselected chats are untouched');
+    assert(followed.map(item=>item.id).join()===[firstTarget,secondTarget].join() && followed.every(item=>item.visible), 'The list scrolls each active row fully into view');
+    assert(followed[0].page.includes('Page 1 of 3') && followed[1].page.includes('Page 2 of 3'), 'The list automatically follows the queue across pages');
+    assert($('selection').textContent==='0' && $('selectionMetricLabel').textContent==='Selected' && $('status').textContent==='Deletion finished.', 'Completion restores the selection count and reports success');
+    assert($('search').value==='Paged chat 090' && $('list').querySelectorAll('.chat').length===1 && !$('search').disabled, 'Completion restores the original search and normal controls automatically');
+    change('search','');
+    assert(!findRow(firstTarget) && !findRow(secondTarget) && findRow(protectedId).dataset.state==='protected', 'Deleted rows are removed and protected neighbours remain');
+    findRow(protectedId).querySelector('.lock').click(); await wait(() => $('list').getAttribute('aria-busy')==='false');
+    const protectedBeforeStart = $('list').querySelector('.chat').dataset.chatId;
+    findRow(protectedBeforeStart).querySelector('input').click();
+    const beforeProtectedRun = deleted.length, beforeProtectedMenus = menusOpened.length;
+    const protectedKey = 'chat-manager:protected:' + adapter.name.toLowerCase() + ':' + protectedBeforeStart;
+    storageFixture.data[protectedKey] = true;
+    $('delete').click(); await wait(finished);
+    assert(deleted.length===beforeProtectedRun && menusOpened.length===beforeProtectedMenus, 'Protection reloaded at queue start skips the chat before any site menu opens');
+    assert(findRow(protectedBeforeStart).dataset.state==='protected' && $('protectedCount').textContent==='1' && findRow(protectedBeforeStart).querySelector('.chat-state').textContent==='Protected', 'A freshly protected target stays protected in the restored list');
+    await chrome.storage.local.remove(protectedKey);
+    $('list').querySelector('input').click();
+    const testStore = ChatProtection.create('storage-test', () => {}); await testStore.refresh();
+    storageFixture.failWrites = true;
+    let failedWrite = false; try { await testStore.set('id', true); } catch { failedWrite = true; }
+    assert(failedWrite && !testStore.ready, 'Failed protection writes fail closed');
+    storageFixture.failWrites = false;
+    storageFixture.failReads = true;
+    let failedRead = false; try { await testStore.refresh(); } catch { failedRead = true; }
+    assert(failedRead && !testStore.ready, 'Failed protection reads fail closed');
+    storageFixture.failReads = false;
+    const deletedBeforeFailure = deleted.length;
+    storageFixture.failReads = true;
+    $('delete').click(); await wait(finished); $('delete').click();
+    assert($('delete').disabled && deleted.length === deletedBeforeFailure, 'Manager refuses deletion when persisted protection cannot be read');
+    storageFixture.failReads = false;
+    await toolbarHandler({id:1, url:'https://chatgpt.com/c/chat'});
+    assert(toolbarCalls.at(-1).join() === 'message,1,toggle-manager', 'Toolbar recognises ChatGPT');
+    await toolbarHandler({id:2, url:'https://gemini.google.com/app/chat'});
+    assert(toolbarCalls.at(-1).join() === 'message,2,toggle-manager', 'Toolbar recognises Gemini');
+    await toolbarHandler({id:3, url:'https://chat.openai.com/c/chat'});
+    assert(toolbarCalls.at(-1).join() === 'message,3,toggle-manager', 'Toolbar recognises legacy ChatGPT');
+    await toolbarHandler({id:4, url:'https://example.com/'});
+    assert(toolbarCalls.at(-1).join() === 'create,chrome-extension://fixture/start.html', 'Toolbar offers a provider choice on other sites');
+    await toolbarHandler({id:5, url:'https://chatgpt.com.evil.example/c/chat'});
+    assert(toolbarCalls.at(-1)[0] === 'create', 'Toolbar rejects lookalike hosts');
+    await toolbarHandler({id:404, url:'https://chatgpt.com/'});
+    assert(toolbarCalls.at(-1).join() === 'reload,404', 'Existing tabs without content script are refreshed');
+    document.getElementById('result').textContent = `PASS: ${checks} ${adapter.name} adapter and deletion checks`;
+  } catch (error) { document.getElementById('result').textContent = 'FAIL: ' + error.stack; }
+})();
+</script>
