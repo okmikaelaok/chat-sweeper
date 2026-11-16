@@ -1,7 +1,7 @@
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { readFileSync } from 'node:fs';
-import { Search, X, ShieldCheck, ShieldOff, Trash2, RefreshCw, Square, Monitor, Sun, Moon, ExternalLink, MessageSquare, ChevronLeft, ChevronRight, Info, Layers, ListChecks, Calendar, ArrowDownAZ, ArrowDownZA, SquareCheck } from 'lucide-react';
+import { Search, X, ShieldCheck, ShieldOff, Trash2, RefreshCw, Square, Monitor, Sun, Moon, ExternalLink, MessageSquare, ChevronLeft, ChevronRight, Info, Layers, ListChecks, ArrowDownAZ, ArrowDownZA, SquareCheck } from 'lucide-react';
 import { Button } from '../src/ui/components/ui/button';
 import { Input } from '../src/ui/components/ui/input';
 import { Select } from '../src/ui/components/ui/select';
@@ -14,8 +14,6 @@ const filterOptions = [
 ];
 const sortOptions = [
   {value: 'sidebar', label: 'Discovery order', icon: ListChecks},
-  {value: 'oldest', label: 'Oldest', icon: Calendar},
-  {value: 'newest', label: 'Newest', icon: Calendar},
   {value: 'az', label: 'Title A–Z', icon: ArrowDownAZ},
   {value: 'za', label: 'Title Z–A', icon: ArrowDownZA},
 ];
@@ -47,7 +45,7 @@ function Shell({site}: {site:string}) {
       <div className="controls">
         <div className="search-wrap"><Search/><Input id="search" type="search" placeholder="Search chat titles" aria-label="Search chat titles"/></div>
         <div className="row"><label className="field"><span>Show</span><Select id="filter" aria-label="Show" options={filterOptions}/></label><label className="field"><span>Sort by</span><Select id="sort" aria-label="Sort by" options={sortOptions}/></label></div>
-        <div className="scan-row"><Button id="scan" variant="outline"><RefreshCw/>Load more chats</Button><Button id="stop" variant="outline" disabled><Square/>Stop</Button></div>
+        <div className="scan-row"><Button id="scan" variant="outline"><RefreshCw/>Load more chats</Button><Button id="stop" variant="outline" disabled><Square fill="currentColor"/>Stop</Button></div>
       </div>
       <div id="systemStatus" className="status-panel" role="group" aria-labelledby="statusLabel">
         <div className="status-readout" role="status" aria-live="polite" aria-atomic="false">
@@ -59,7 +57,7 @@ function Shell({site}: {site:string}) {
           </dl>
         </div>
         <div id="selectionBar" className="status-actions">
-          <div id="selectionControl"><label><input id="all" type="checkbox" aria-label="Select all unprotected chats on this page" title="Select all unprotected chats on this page (up to 50)"/><span>Select all</span><span className="selection-scope">- in this page</span></label></div>
+          <div id="selectionControl"><label><input id="all" type="checkbox" aria-label="Select all unprotected chats on this page" title="Select all unprotected chats on this page (up to 50)"/><span>Select all</span><span className="selection-scope">on this page · max 50</span></label></div>
           <nav className="pagination" aria-label="Chat pages"><Button id="previousPage" variant="outline" size="icon" aria-label="Previous 50 chats"><ChevronLeft/></Button><span id="pageInfo" role="status" aria-live="polite">No chats</span><Button id="nextPage" variant="outline" size="icon" aria-label="Next 50 chats"><ChevronRight/></Button></nav>
         </div>
       </div>

@@ -1,6 +1,6 @@
 {
   "name": "chatsweeper",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "description": "ChatSweeper — Select. Manage. Keep or Sweep. Manage Gemini and ChatGPT chats.",
   "type": "module",

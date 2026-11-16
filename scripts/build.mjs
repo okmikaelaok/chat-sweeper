@@ -1,5 +1,5 @@
 import { build } from 'esbuild';
-import { readFile, writeFile, mkdir, copyFile } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, copyFile, readdir, rm } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { Resvg } from '@resvg/resvg-js';
@@ -7,8 +7,13 @@ await import('./notices.mjs');
 await mkdir('.tools', {recursive:true});
 await mkdir('extension/assets', {recursive:true});
 await mkdir('extension/assets/previews', {recursive:true});
-for (const file of ['closed-chatsweeper.png','chatgpt-chatsweeper.png','gemini-chatsweeper.png','chatsweeper-panel2.png']) {
-  await copyFile('docs/images/' + file, 'extension/assets/previews/' + file);
+const previewSource = 'docs/images/v0.1.2';
+const previewFiles = (await readdir(previewSource)).filter(file => file.endsWith('.png'));
+for (const file of await readdir('extension/assets/previews')) {
+  if (file.endsWith('.png') && !previewFiles.includes(file)) await rm(path.join('extension/assets/previews', file));
+}
+for (const file of previewFiles) {
+  await copyFile(path.join(previewSource, file), path.join('extension/assets/previews', file));
 }
 const sourceIcon = await readFile('extension/assets/chat-sweeper-icon.png');
 if (!sourceIcon.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]))) throw new Error('The source icon must be a PNG.');
@@ -28,7 +33,8 @@ const startCss = spawnSync(process.execPath, [cli,'-i','src/ui/start.css','-o','
 if (startCss.status !== 0) process.exit(startCss.status || 1);
 const styles = await readFile('extension/assets/styles.css','utf8');
 await writeFile('extension/ui.js', 'globalThis.ChatSweeperUI = ' + JSON.stringify({shells,styles,icons}) + ';\n');
-for (const file of ['background.js','content.js','dates.js','sites.js','protection.js','theme.js','dialogs.js','start.js']) {
+await rm('extension/dates.js', {force:true});
+for (const file of ['background.js','content.js','sites.js','protection.js','theme.js','dialogs.js','start.js']) {
   await writeFile('extension/' + file, await readFile('src/' + file,'utf8'));
 }
 await writeFile('extension/start.html', '<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>ChatSweeper</title><link rel="icon" type="image/png" sizes="32x32" href="assets/icon-32.png"><link rel="stylesheet" href="assets/start.css"></head><body>' + startMarkup + '<script src="theme.js"></script><script src="dialogs.js"></script><script src="start.js"></script></body></html>');

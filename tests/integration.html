@@ -17,7 +17,7 @@ const path = provider === 'gemini' ? '/app/' : '/c/';
 const url = id => origin + path + id;
 let deleted = [], menusOpened = [], confirmations = 0;
 let onChatDialog = null;
-function fixture(id, title, date) {
+function fixture(id, title) {
   const row = document.createElement('div'); row.className = provider === 'gemini' ? 'conversation-items-container' : 'conversation'; row.dataset.testid = 'history-item-' + id;
   const a = document.createElement(provider === 'gemini' ? 'div' : 'a');
   if (provider === 'gemini') {
@@ -27,7 +27,6 @@ function fixture(id, title, date) {
     else if (id === 'unknown') a.id = 'c_' + id;
     else a.setAttribute('jslog','12345; metadata:["c_' + id + '"]');
   } else { a.href = url(id); a.textContent = title; }
-  const time = document.createElement('time'); if (date) time.setAttribute('datetime', date);
   const menu = document.createElement('button'); menu.setAttribute('aria-label', 'Open conversation options'); menu.setAttribute('aria-haspopup', 'menu');
   if (provider === 'gemini') { menu.removeAttribute('aria-label'); menu.removeAttribute('aria-haspopup'); menu.setAttribute('data-test-id','actions-menu-button'); }
   menu.onclick = () => {
@@ -48,14 +47,14 @@ function fixture(id, title, date) {
     };
     popup.append(archive,remove); document.body.append(popup);
   };
-  row.append(a,time,menu); document.getElementById('fixture').append(row); return {row,a,menu};
+  row.append(a,menu); document.getElementById('fixture').append(row); return {row,a,menu};
 }
-const first = fixture('first', 'First dated chat', '2025-02-01');
-const second = fixture('second', 'Older dated chat', '2024-01-01');
-const unknown = fixture('unknown', 'No date', null);
+const first = fixture('first', 'First chat');
+const second = fixture('second', 'Second chat');
+const unknown = fixture('unknown', 'Other chat');
 document.getElementById('main').innerHTML = `<a href="${url('main-link')}">A chat link in a message</a>`;
 </script>
-<script src="storage.js"></script><script src="../extension/protection.js"></script><script src="../extension/dates.js"></script><script src="../extension/sites.js"></script>
+<script src="storage.js"></script><script src="../extension/protection.js"></script><script src="../extension/sites.js"></script>
 <script>
 const original = ChatSites.forLocation;
 const adapter = original(new URL(origin));
@@ -110,13 +109,48 @@ ChatSites.forLocation = () => adapter;
     contentMessageHandler({type:'toggle-manager'});assert($('panel').hidden, 'Toolbar message closes the panel');
     contentMessageHandler({type:'toggle-manager'});assert(!$('panel').hidden, 'Toolbar message opens the panel');
 
+    const list = $('list'), panel = $('panel');
+    const listStyle = list.style.cssText, panelWidth = panel.style.width;
+    const originalRows = [...list.querySelectorAll('.chat')];
+    originalRows.slice(1).forEach(row => row.hidden = true);
+    Object.assign(list.style, {height:'180px', minHeight:'180px', maxHeight:'180px', flex:'0 0 180px'});
+    const aligned = () => {
+      const row = originalRows[0].getBoundingClientRect();
+      return ['search','systemStatus','delete'].every(id => {
+        const control = $(id).getBoundingClientRect();
+        return Math.abs(row.left - control.left) < 1 && Math.abs(row.right - control.right) < 1;
+      });
+    };
+    await wait(aligned);
+    assert(list.scrollHeight <= list.clientHeight, 'Sparse chat list does not need a scrollbar');
+    assert(aligned(), 'Chat rows align with search, status and footer controls');
+    const sparseBounds = originalRows[0].getBoundingClientRect();
+    const extraRows = Array.from({length:30}, () => originalRows[0].cloneNode(true));
+    list.append(...extraRows);
+    await pause(100);
+    await wait(aligned);
+    assert(list.scrollHeight > list.clientHeight, 'Additional chat rows make the list scroll');
+    const scrollingBounds = originalRows[0].getBoundingClientRect();
+    assert(Math.abs(sparseBounds.left - scrollingBounds.left) < 1 && Math.abs(sparseBounds.width - scrollingBounds.width) < 1, 'Scrollbar appearance preserves chat alignment and width');
+    assert(list.scrollWidth <= list.clientWidth + 1, 'Scrolling chat list has no horizontal overflow');
+    panel.style.width = '300px';
+    await pause(100);
+    await wait(aligned).catch(() => {
+      throw new Error('Resized layout bounds: ' + JSON.stringify([originalRows[0], $('search'), $('systemStatus'), $('delete'), list, ui.querySelector('.controls')].map(node => ({name:node.id || node.className, left:node.getBoundingClientRect().left, right:node.getBoundingClientRect().right, clientWidth:node.clientWidth, scrollbar:getComputedStyle(node).getPropertyValue('--scrollbar-width')}))));
+    });
+    assert(aligned() && list.scrollWidth <= list.clientWidth + 1, 'Chat and control widths remain aligned after resizing the panel');
+    extraRows.forEach(row => row.remove());
+    originalRows.forEach(row => row.hidden = false);
+    list.style.cssText = listStyle;
+    panel.style.width = panelWidth;
+
     const listTitles = () => [...$('list').querySelectorAll('.chat a')].map(a => a.firstChild.textContent);
     const change = (id,value) => { $(id).value = value; $(id).dispatchEvent(new Event('input')); };
     change('search','First');
     $('list').querySelector('.lock').click(); await wait(() => $('list').getAttribute('aria-busy') === 'false');
     assert($('list').querySelector('input').disabled, 'Protect prevents selecting the chat for deletion');
     change('filter','protected');
-    assert(listTitles().join() === 'First dated chat' && !$('savedProtection'), 'Protected chats use the same single list');
+    assert(listTitles().join() === 'First chat' && !$('savedProtection'), 'Protected chats use the same single list');
     $('list').querySelector('.lock').click(); await wait(() => $('list').getAttribute('aria-busy') === 'false');
     change('filter','all'); change('search','');
     $('about').click();
@@ -133,9 +167,10 @@ ChatSites.forLocation = () => adapter;
     assert(!$('panel').textContent.includes('Mikaela Marie Punzalan'), 'Author name is omitted from the panel footer');
     $('aboutClose').click(); await pause(0);
     assert(!$('aboutDialog').open, 'About closes without changing selection');
-    change('sort','oldest'); assert(listTitles().join('|') === 'Older dated chat|First dated chat|No date', 'Oldest first, unknown last');
-    change('sort','newest'); assert(listTitles().join('|') === 'First dated chat|Older dated chat|No date', 'Newest first, unknown last');
-    assert(!$('from') && !$('dateDetails'), 'Separate date filters are removed');
+    change('sort','az'); assert(listTitles().join('|') === 'First chat|Other chat|Second chat', 'Titles sort A to Z');
+    change('sort','za'); assert(listTitles().join('|') === 'Second chat|Other chat|First chat', 'Titles sort Z to A');
+    change('sort','sidebar'); assert(listTitles().join('|') === 'First chat|Second chat|Other chat', 'Discovery order can be restored');
+    assert(!$('from') && !$('dateDetails') && !ui.querySelector('.chat-date'), 'Date controls and row metadata are removed');
     change('search','First');
     $('list').querySelector('input').click();
     $('list').querySelector('.lock').click();
@@ -190,7 +225,7 @@ ChatSites.forLocation = () => adapter;
     // A labelled button in a multi-chat navigation container must not be chosen.
     assert(!adapter.links().some(a => a.textContent.includes('message')), 'Message links remain excluded');
     assert(!$('projects') && !$('projectConfirm'), 'Nonworking project controls are omitted');
-    for (let i=0;i<104;i++) fixture('page-'+i, 'Paged chat '+String(i).padStart(3,'0'), null);
+    for (let i=0;i<104;i++) fixture('page-'+i, 'Paged chat '+String(i).padStart(3,'0'));
     $('launch').click(); $('launch').click(); change('sort','sidebar');
     $('all').checked=false; $('all').dispatchEvent(new Event('change'));
     assert($('count').textContent==='105' && $('list').querySelectorAll('.chat').length===50, 'Only 50 chats render even when 105 are discovered');

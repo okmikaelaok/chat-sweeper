@@ -7,7 +7,7 @@ const chrome = process.env.CHROME_BIN || ['C:/Program Files/Google/Chrome/Applic
 if (!chrome) throw new Error('Set CHROME_BIN to your Chrome/Chromium executable to run the browser fixtures.');
 await mkdir('.tools/test-results',{recursive:true});
 let failed = false, checks = 0;
-for (const [name, file, query] of [['dates','dates.html',''],['chatgpt','integration.html','?site=chatgpt'],['gemini','integration.html','?site=gemini'],['themes','themes.html',''],['new-chatgpt','discovery.html','?site=chatgpt'],['new-gemini','discovery.html','?site=gemini']]) {
+for (const [name, file, query] of [['sorting','sorting.html',''],['status','status.html',''],['chatgpt','integration.html','?site=chatgpt'],['gemini','integration.html','?site=gemini'],['themes','themes.html',''],['new-chatgpt','discovery.html','?site=chatgpt'],['new-gemini','discovery.html','?site=gemini']]) {
   const profile = await mkdtemp(path.resolve('.tools/test-profile-'));
   const url = pathToFileURL(path.resolve('tests/' + file)).href + query;
   const output = await new Promise((resolve,reject) => {
@@ -33,7 +33,8 @@ for (const [size,file] of Object.entries(manifest.icons)) {
   if (png.readUInt32BE(16) !== Number(size) || png.readUInt32BE(20) !== Number(size)) throw new Error('Incorrect PNG icon size: '+file);
 }
 if (manifest.content_scripts[0].matches.length !== 3 || manifest.permissions.join() !== 'activeTab,storage') throw new Error('Permissions changed unexpectedly');
-for (const file of ['content.js','background.js','dates.js','sites.js','protection.js','theme.js','dialogs.js','start.js']) {
+if (existsSync('extension/dates.js') || manifest.content_scripts[0].js.includes('dates.js')) throw new Error('Obsolete date feature remains in the extension');
+for (const file of ['content.js','background.js','sites.js','protection.js','theme.js','dialogs.js','start.js']) {
   const text = await readFile('extension/'+file,'utf8');
   if (/\bfetch\s*\(|XMLHttpRequest|\beval\s*\(/.test(text)) throw new Error('Unexpected network/eval in '+file);
 }

@@ -6,6 +6,14 @@ import { Button } from '../src/ui/components/ui/button';
 import { AboutDialog, BrandIcon, Theme } from './render';
 
 const {version} = JSON.parse(readFileSync('package.json', 'utf8')) as {version: string};
+const gallery = [
+  {file: 'search-title.png', caption: 'Search', alt: 'ChatSweeper searching chat titles and showing matching selected chats on ChatGPT'},
+  {file: 'chatgpt-chatsweeper-deleting.png', caption: 'ChatGPT', alt: 'ChatSweeper showing deleted, deleting and protected chats on ChatGPT'},
+  {file: 'gemini-chatsweeper-deleting.png', caption: 'Gemini', alt: 'ChatSweeper showing deletion progress and protected chats on Gemini'},
+  {file: 'show-filter.png', caption: 'Show filters', alt: 'ChatSweeper Show dropdown for filtering chats'},
+  {file: 'sortby-filter.png', caption: 'Sort by', alt: 'ChatSweeper Sort by dropdown with discovery order and title sorting'},
+  {file: 'no-matching-chats.png', caption: 'No matches', alt: 'ChatSweeper showing no matching chats for the current search or filter'},
+];
 
 function Start() {
   return <main className="welcome">
@@ -50,8 +58,8 @@ function Start() {
       </div>
       <div className="welcome-panel-hero">
       <span className="welcome-panel-badge"><Moon/>Dark Mode</span>
-      <a className="welcome-panel-preview" href="assets/previews/chatsweeper-panel2.png" target="_blank" rel="noopener noreferrer" aria-label="View the ChatSweeper panel close-up full size">
-        <img src="assets/previews/chatsweeper-panel2.png" alt="Close-up of ChatSweeper on ChatGPT showing selected and protected chats" width="526" height="1114" loading="lazy" decoding="async"/>
+      <a className="welcome-panel-preview" href="assets/previews/closeup-deleting.png" target="_blank" rel="noopener noreferrer" aria-label="View the ChatSweeper deletion close-up full size">
+        <img src="assets/previews/closeup-deleting.png" alt="Close-up of ChatSweeper deleting chats on Gemini, with deleted and protected states visible" width="536" height="1108" decoding="async"/>
       </a>
       </div>
       </div>
@@ -59,27 +67,24 @@ function Start() {
     <section className="welcome-gallery" aria-labelledby="galleryTitle" aria-roledescription="carousel">
       <h2 id="galleryTitle" className="sr-only">ChatSweeper in action</h2>
       <div id="screenshotCarousel" className="carousel-stage" tabIndex={0} aria-label="Screenshots. Use left and right arrow keys to browse.">
-        {[
-          {file: 'closed-chatsweeper.png', caption: 'Closed panel', alt: 'ChatSweeper corner button with the panel closed'},
-          {file: 'chatgpt-chatsweeper.png', caption: 'ChatGPT', alt: 'ChatSweeper managing selected and protected chats on ChatGPT'},
-          {file: 'gemini-chatsweeper.png', caption: 'Gemini', alt: 'ChatSweeper showing deletion progress on Gemini'},
-        ].map(({file, caption, alt}, index) => <button
+        {gallery.map(({file, caption, alt}, index) => <button
           type="button" className="carousel-slide" key={file} data-caption={caption}
-          data-position={index === 1 ? 'current' : index === 0 ? 'previous' : 'next'}
+          data-position={index === 1 ? 'current' : index === 0 ? 'previous' : index === 2 ? 'next' : 'hidden'}
+          hidden={index > 2}
           aria-label={`${index === 1 ? 'Expand' : 'Show'} ${caption} screenshot`} aria-current={index === 1 ? 'true' : undefined}>
           <img src={`assets/previews/${file}`} alt={alt} width="1920" height="1200" decoding="async"/>
         </button>)}
       </div>
       <div className="carousel-controls">
         <Button id="carouselPrevious" variant="outline" size="icon" aria-label="Previous screenshot"><ChevronLeft/></Button>
-        <p id="carouselCaption" aria-live="polite" aria-atomic="true">ChatGPT · 2 of 3</p>
+        <p id="carouselCaption" aria-live="polite" aria-atomic="true">{gallery[1].caption} · 2 of {gallery.length}</p>
         <Button id="carouselNext" variant="outline" size="icon" aria-label="Next screenshot"><ChevronRight/></Button>
         <Button id="carouselExpand" variant="outline"><Maximize2/>Expand</Button>
       </div>
     </section>
     <dialog id="screenshotDialog" className="screenshot-dialog" aria-labelledby="screenshotTitle">
       <div className="screenshot-dialog-heading"><h2 id="screenshotTitle">ChatGPT</h2><Button id="screenshotClose" variant="outline" size="icon" aria-label="Close screenshot"><X/></Button></div>
-      <img id="screenshotImage" src="assets/previews/chatgpt-chatsweeper.png" alt="ChatSweeper managing selected and protected chats on ChatGPT" width="1920" height="1200"/>
+      <img id="screenshotImage" src="assets/previews/chatgpt-chatsweeper-deleting.png" alt="ChatSweeper showing deleted, deleting and protected chats on ChatGPT" width="1920" height="1200"/>
     </dialog>
     <AboutDialog/>
   </main>;

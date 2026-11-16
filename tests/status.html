@@ -1,0 +1,66 @@
+<!doctype html><meta charset="utf-8"><title>ChatSweeper status tests</title>
+<body><pre id="result">RUNNING</pre><nav aria-label="Chat history"><div data-testid="history-item-status"><a href="https://chatgpt.com/c/status-example">A sample chat</a></div></nav>
+<script>globalThis.chrome={runtime:{onMessage:{addListener(){}}}};</script>
+<script src="storage.js"></script><script src="../extension/sites.js"></script>
+<script>const forLocation=ChatSites.forLocation;ChatSites.forLocation=()=>forLocation(new URL('https://chatgpt.com/'));</script>
+<script src="../extension/protection.js"></script><script src="../extension/ui.js"></script><script src="../extension/theme.js"></script><script src="../extension/dialogs.js"></script>
+<script>
+const mount=ChatSweeperTheme.mount;
+ChatSweeperTheme.mount=(target,select,report,...options)=>{globalThis.reportStatus=report;return mount(target,select,report,...options);};
+</script>
+<script src="../extension/content.js"></script>
+<script>
+(async()=>{
+  let checks=0;
+  const assert=(ok,message)=>{if(!ok)throw new Error(message);checks++;};
+  const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+  const wait=async check=>{for(let n=0;n<100;n++){if(check())return;await pause(50);}throw new Error('Status test timed out');};
+  try {
+    const root=document.getElementById('chatsweeper-root').shadowRoot,$=id=>root.getElementById(id);
+    $('launch').click();await wait(()=>$('status').textContent==='Protected chats excluded.');
+    const fieldHeight=$('filter').getBoundingClientRect().height;
+    assert($('statusLabel').getBoundingClientRect().height===fieldHeight,'Status label matches dropdown height');
+    assert(root.querySelector('.status-heading').getBoundingClientRect().height>=fieldHeight,'Status row is at least as tall as dropdowns');
+    const cases=[
+      ['Protection changed; review selection.','Protection changed. Review.'],
+      ['Loading protection; deletion disabled.','Loading protection.'],
+      ['Deletion is permanent · 50 off-page.','Permanent; 50 off-page.'],
+      ['Scan limit reached; load more to resume.','Scan limit reached. Load more.'],
+      ['No chats detected. Expand the sidebar, then try Load more chats.','No chats found. Check sidebar.'],
+      ['Chat rows were found, but their identifiers could not be read.','Chat IDs unavailable.'],
+      ['“A very long protected chat title” is protected. Deletion stopped.','Chat protected. Stopped.'],
+      ['Close the open ChatGPT dialog or menu before deleting.','Close the open popup.'],
+      ['Stopped before deletion. Close the open menu to cancel.','Deletion stopped.'],
+      ['Stopped before confirmation. Close the Gemini dialog to cancel.','Deletion stopped.'],
+      ['Cannot locate “A very long chat title” in the sidebar. Deletion stopped.','Chat not found. Stopped.'],
+      ['ChatGPT’s expected control did not appear. Deletion stopped; check the page before retrying.','Site control missing. Stopped.'],
+      ['Could not identify this chat’s menu. Expand the sidebar and try again.','Chat menu unavailable.'],
+      ['Unrecognised confirmation dialog. Deletion stopped.','Confirmation not recognised.'],
+      ['Could not identify Gemini’s Delete confirmation.','Delete confirmation unavailable.'],
+      ['Theme preference could not be loaded.','Theme preference unavailable.'],
+      ['Theme changed for this tab, but could not be saved.','Theme preference not saved.'],
+      ['An unusually long browser message that cannot be predicted in advance.','Action stopped. Check details.'],
+      ['Checking for new chats…','Checking for new chats'],
+      ['Stopping…','Stopping'],
+      ['Scan stopped.','Scan stopped.'],
+      ['Deletion finished.','Deletion finished.'],
+    ];
+    for(const [detail,summary] of cases){
+      reportStatus(detail);
+      const visible=$('status').textContent;
+      assert(visible===summary,'Concise message: '+detail);
+      assert(visible.split(/\s+/).length<=5 && Array.from(visible).length<=32 && !/…|\.{3}/.test(visible),'Status respects word and character limits');
+      assert($('status').title===detail && $('status').getAttribute('aria-label')===detail,'Full details remain available');
+    }
+    $('panel').style.width='280px';
+    reportStatus('Could not identify Gemini’s Delete confirmation.');
+    const style=getComputedStyle($('status'));
+    assert(style.whiteSpace==='normal' && style.overflow==='visible' && style.textOverflow!=='ellipsis','Status wraps without clipping or an ellipsis');
+    assert($('status').scrollWidth<=$('status').clientWidth+1,'Long concise messages fit narrow panels');
+    reportStatus('');
+    assert($('status').hidden || getComputedStyle($('status')).display==='none','Empty status does not reserve text space');
+    assert(!$('status').hasAttribute('aria-label') && $('status').title==='','Empty status clears old details');
+    document.getElementById('result').textContent='PASS: '+checks+' status wording and layout checks';
+  } catch(error){document.getElementById('result').textContent='FAIL: '+error.stack;}
+})();
+</script>

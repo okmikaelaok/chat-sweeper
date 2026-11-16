@@ -22,7 +22,7 @@ const original=entry('initial','Initial chat');entry('second','Second chat');ent
 </script>
 <script src="storage.js"></script><script src="../extension/sites.js"></script>
 <script>const forLocation=ChatSites.forLocation;ChatSites.forLocation=()=>forLocation(new URL(origin));</script>
-<script src="../extension/dates.js"></script><script src="../extension/protection.js"></script><script src="../extension/ui.js"></script><script src="../extension/theme.js"></script><script src="../extension/dialogs.js"></script><script src="../extension/content.js"></script>
+<script src="../extension/protection.js"></script><script src="../extension/ui.js"></script><script src="../extension/theme.js"></script><script src="../extension/dialogs.js"></script><script src="../extension/content.js"></script>
 <script>
 (async()=>{
  let checks=0;const assert=(ok,message)=>{if(!ok)throw new Error(message);checks++;};
@@ -89,8 +89,8 @@ const original=entry('initial','Initial chat');entry('second','Second chat');ent
   assert(!$('status').textContent.includes('expand'),'A visible short sidebar does not ask the user to expand it');
   $('scan').click();await wait(()=>!$('scan').disabled);
   assert($('status').textContent==='No new chats found.','Repeated checks clearly report that no additional chats were found');
-  $('sort').value='oldest';$('sort').dispatchEvent(new Event('input'));
-  assert($('status').textContent==='No dates; using discovery order.','Sorting replaces a scan notice with the date explanation');
+  $('sort').value='az';$('sort').dispatchEvent(new Event('input'));
+  assert($('status').textContent==='','Sorting clears the previous scan notice');
   document.getElementById('result').textContent='PASS: '+checks+' '+provider+' live discovery checks';
  } catch(error) {document.getElementById('result').textContent='FAIL: '+error.stack;}
  finally {clearInterval(streaming);clearInterval(scrollMonitor);}

@@ -1,4 +1,4 @@
-@import "tailwindcss" source(none);
+@import "tailwindcss";
 
 @source "../../scripts/start.tsx";
 
@@ -69,10 +69,19 @@
     cursor: default;
   }
 
+  button:disabled,
+  input:disabled,
+  select:disabled {
+    opacity: .45;
+  }
+
   button:focus-visible,
-  a:focus-visible,
   input:focus-visible,
   select:focus-visible {
+    outline: none;
+  }
+
+  a:focus-visible {
     outline: 2px solid var(--primary);
     outline-offset: 3px;
   }
@@ -111,19 +120,14 @@ dialog::backdrop {
 }
 
 .welcome {
-  --welcome-accent: #7C3AED;
-  --welcome-accent-bg: #F3E8FF;
+  --welcome-accent: var(--primary);
+  --welcome-accent-bg: var(--accent);
   max-width: 1600px;
   min-height: 100svh;
   display: flex;
   flex-direction: column;
   margin: 0 auto;
   padding: 32px 40px 24px;
-}
-
-:root[data-theme=dark] .welcome {
-  --welcome-accent: #A78BFA;
-  --welcome-accent-bg: #302740;
 }
 
 .welcome-top {
@@ -213,8 +217,8 @@ dialog::backdrop {
 }
 
 .welcome-panel-preview:focus-visible {
-  outline: 2px solid var(--welcome-accent);
-  outline-offset: 4px;
+  border-color: var(--primary);
+  outline: none;
 }
 
 .welcome-panel-preview img {
@@ -280,6 +284,7 @@ dialog::backdrop {
   min-height: 44px;
   padding: 10px 20px;
   border-radius: 9px;
+  border: 2px solid var(--control-border);
   background: var(--welcome-accent);
   color: var(--primary-foreground);
   font-size: 16px;
@@ -292,8 +297,8 @@ dialog::backdrop {
 }
 
 .welcome-download-button:focus-visible {
-  outline: 2px solid var(--welcome-accent);
-  outline-offset: 4px;
+  border-color: var(--primary);
+  outline: none;
 }
 
 .welcome-download-note {
@@ -328,8 +333,8 @@ dialog::backdrop {
 }
 
 .site-card:focus-visible {
-  outline: 2px solid var(--welcome-accent);
-  outline-offset: 4px;
+  border-color: var(--primary);
+  outline: none;
 }
 
 .site-card-top {
@@ -472,8 +477,8 @@ dialog::backdrop {
 }
 
 .carousel-slide:focus-visible {
-  outline: 2px solid var(--welcome-accent);
-  outline-offset: -4px;
+  border-color: var(--primary);
+  outline: none;
   opacity: 1;
 }
 
@@ -647,11 +652,11 @@ dialog.screenshot-dialog {
 }
 
 :root[data-theme=dark] {
-  --background: #1C1C26;
-  --card: #252530;
-  --border: #4A4858;
-  --primary: #302740;
-  --accent: #A78BFA;
+  --background: #0B0B10;
+  --card: #18181F;
+  --border: #30303B;
+  --primary: #A78BFA;
+  --accent: #302740;
   --foreground: #F4F4F5;
   --muted-foreground: #A1A1AA;
   --destructive: #FB7185;
@@ -688,8 +693,9 @@ dialog.screenshot-dialog {
   height: 36px;
 }
 
+.welcome button,
 dialog button {
-  border: 1.5px solid var(--control-border);
+  border: 2px solid var(--control-border);
   border-radius: 9px;
   box-shadow: none;
   font-size: var(--control-font-size);
@@ -698,9 +704,24 @@ dialog button {
   line-height: 1.4;
 }
 
+.welcome button:enabled:hover,
 dialog button:enabled:hover {
+  border-color: var(--primary);
   background: var(--accent);
   color: var(--foreground);
+}
+
+#about,
+#aboutClose {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+#about:enabled:hover,
+#aboutClose:enabled:hover,
+.theme-control select:enabled:hover {
+  border-color: var(--primary);
+  background: var(--background);
 }
 
 dialog button svg {
@@ -719,7 +740,7 @@ dialog button svg {
 .theme-control select {
   cursor: pointer;
   height: var(--header-control-size);
-  border: 1.5px solid var(--control-border);
+  border: 2px solid var(--control-border);
   background: var(--background);
   border-radius: 9px;
   color: var(--foreground);
@@ -759,11 +780,6 @@ dialog button svg {
     color: var(--foreground);
   }
 
-  .ui-select:open {
-    border-color: var(--primary);
-    background: var(--accent);
-  }
-
   .ui-select::picker(select) {
     margin-block: 6px;
     padding: 5px;
@@ -771,7 +787,7 @@ dialog button svg {
     max-width: calc(100vw - 24px);
     max-height: min(360px, 60vh);
     overflow-y: auto;
-    border: 1px solid var(--control-border);
+    border: 2px solid var(--control-border);
     border-radius: 12px;
     background: var(--card);
     color: var(--foreground);
@@ -805,8 +821,7 @@ dialog button svg {
   }
 
   .ui-select option:focus-visible {
-    outline: 2px solid var(--primary);
-    outline-offset: -2px;
+    outline: none;
   }
 
   .ui-select option:checked svg {
@@ -826,17 +841,25 @@ dialog button svg {
   }
 }
 
-.theme-control select:focus {
-  border: 1.5px solid var(--primary);
-  outline: 2px solid var(--primary);
-  outline-offset: 2px;
+#about:focus,
+#aboutClose:focus,
+.theme-control select:focus,
+.theme-control select:open {
+  border: 2px solid var(--primary);
+  outline: none;
   box-shadow: none;
 }
 
-dialog button:focus-visible,
 dialog a:focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
+}
+
+.welcome button:focus-visible,
+dialog button:focus-visible {
+  border-color: var(--primary);
+  outline: none;
+  box-shadow: none;
 }
 
 #about {
@@ -880,10 +903,6 @@ dialog a {
   color: var(--primary);
   text-decoration: underline;
   text-underline-offset: 3px;
-}
-
-:root[data-theme=dark] dialog a {
-  color: #A78BFA;
 }
 
 #aboutClose {

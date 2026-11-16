@@ -1,0 +1,48 @@
+<!doctype html><meta charset="utf-8"><title>ChatSweeper sorting tests</title>
+<body><pre id="result">RUNNING</pre><nav aria-label="Chat history">
+<div class="conversation-items-container"><a href="https://gemini.google.com/app/topic-a"><span class="conversation-title">Zucchini growing</span></a><time datetime="2023-01-01"></time></div>
+<div class="conversation-items-container"><a href="https://gemini.google.com/app/topic-b"><span class="conversation-title">Astronomy basics</span></a><time datetime="2026-01-01"></time></div>
+<div class="conversation-items-container"><a href="https://gemini.google.com/app/topic-c"><span class="conversation-title">Museum visits</span></a></div>
+</nav>
+<script>globalThis.chrome = {runtime:{onMessage:{addListener(){}}}};</script>
+<script src="storage.js"></script><script src="../extension/protection.js"></script><script src="../extension/sites.js"></script>
+<script>
+const forLocation = ChatSites.forLocation;
+ChatSites.forLocation = () => forLocation(new URL('https://gemini.google.com/'));
+storageFixture.data['chat-manager:protected:gemini:not-loaded'] = true;
+</script>
+<script src="../extension/ui.js"></script><script src="../extension/theme.js"></script><script src="../extension/dialogs.js"></script><script src="../extension/content.js"></script>
+<script>
+(async () => {
+  let checks = 0;
+  const assert = (ok, message) => {if (!ok) throw new Error(message); checks++;};
+  const pause = ms => new Promise(resolve => setTimeout(resolve,ms));
+  const wait = async check => {for(let n=0;n<100;n++){if(check())return;await pause(50);}throw new Error('Sorting test timed out');};
+  try {
+    const root = document.getElementById('chatsweeper-root').shadowRoot, $ = id => root.getElementById(id);
+    const titles = () => [...$('list').querySelectorAll('.chat-title')].map(node => node.textContent).join('|');
+    const change = (id,value) => {$(id).value = value;$(id).dispatchEvent(new Event('input'));};
+    $('launch').click();await wait(() => $('count').textContent === '3');
+    assert([...$('sort').options].map(option => option.value).join() === 'sidebar,az,za', 'Only discovery and title sorting are offered');
+    assert(typeof globalThis.ChatDates === 'undefined', 'Date module is not loaded');
+    assert(!root.querySelector('.chat-date') && !$('list').textContent.includes('Date unknown'), 'Rows contain no date metadata or placeholders');
+    assert([...$('list').querySelectorAll('.chat-meta')].every(node => node.hidden), 'Ordinary rows do not reserve an empty metadata line');
+    assert(titles() === 'Zucchini growing|Astronomy basics|Museum visits', 'Discovery order ignores timestamp metadata');
+    change('sort','az');assert(titles() === 'Astronomy basics|Museum visits|Zucchini growing', 'Title sorting works A to Z');
+    change('sort','za');assert(titles() === 'Zucchini growing|Museum visits|Astronomy basics', 'Title sorting works Z to A');
+    change('sort','sidebar');assert(titles() === 'Zucchini growing|Astronomy basics|Museum visits', 'Discovery order can be restored');
+    assert(!$('scan').disabled && $('status').textContent === '', 'Sorting does not scan or display date notices');
+    change('search','Astronomy');assert(titles() === 'Astronomy basics', 'Search works without dates');
+    change('search','');
+    $('list').querySelector('.lock').click();await wait(() => $('list').getAttribute('aria-busy') === 'false');
+    const protectedRow = $('list').querySelector('.chat');
+    assert(protectedRow.querySelector('.chat-state').textContent === 'Protected' && !protectedRow.querySelector('.chat-meta').hidden, 'Protection state remains visible without date metadata');
+    change('filter','protected');
+    assert($('list').textContent.includes('Saved protection · not loaded in this sidebar'), 'Undiscovered protected IDs retain their explanatory note');
+    assert($('count').textContent === '3', 'Undiscovered protected IDs do not inflate the discovery count');
+    change('filter','all');change('search','No matching topic');
+    assert($('list').textContent.includes('No chats match') && $('status').textContent === '', 'Empty results do not introduce date notices');
+    document.getElementById('result').textContent = 'PASS: ' + checks + ' sorting and metadata checks';
+  } catch (error) {document.getElementById('result').textContent = 'FAIL: ' + error.stack;}
+})();
+</script>

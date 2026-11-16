@@ -18,19 +18,21 @@ The TypeScript compiler and React, React DOM and Node type definitions are pinne
 
 | Path | Purpose |
 | --- | --- |
-| `src/` | Existing site adapters, queue, protection and date logic; shared theme controller |
+| `src/` | Site adapters, queue and protection logic; shared theme controller |
 | `src/ui/` | React templates, shadcn/ui source, Tailwind styles and palette tokens |
 | `extension/` | Loadable build, manifest and locally bundled assets; committed for easy installation |
-| `tests/` | Behaviour, date, theme and UI fixtures with simulated extension storage |
+| `tests/` | Behaviour, sorting, theme and UI fixtures with simulated extension storage |
 | `scripts/` | Build, local tests, packaging, attribution and preview generation |
 | `docs/` | Usage details, development notes and gallery images |
 | `licenses/` | Upstream license texts and generated dependency notices |
+
+Current screenshots are in `docs/images/v0.1.2/`; older screenshots are archived in `docs/images/v0.1.0/`. The build synchronizes the current images into `extension/assets/previews/`. The fallback hero uses the deletion close-up, and its six-image carousel shows the latest full-page screenshots.
 
 `scripts/render.tsx` renders the extension panel and shared components to static markup **at build time**. `scripts/start.tsx` renders the fallback page separately. Tailwind compiles CSS and Lucide supplies inline SVG icons. `src/content.js` attaches the existing DOM controller to those stable element IDs inside a shadow root. This preserves behaviour without mounting a new React application or bundling a React runtime in the extension. Rebuild `extension/` after changing source; reload the extension and refresh supported tabs.
 
 The panel uses `src/ui/styles.css`, which builds to `extension/assets/styles.css` and is embedded in `extension/ui.js`. Its dark palette matches the panel screenshots: `#18181F` panel surfaces, `#0B0B10` fields and rows, `#302740` selection backgrounds and `#A78BFA` accents. The published v0.1.0 source had the primary/accent colours reversed; restoring that release alone does not restore the screenshot palette. Browser theme checks guard these colours. The fallback page uses its own `src/ui/start.css`, built to `extension/assets/start.css`. Keep fallback layout and palette changes in that separate file. Its saved theme uses `chatsweeper:start-theme`; the panel retains `chatsweeper:theme`, so switching themes on the fallback does not recolour the panel.
 
-Palette tokens are in `src/ui/styles.css`. Theme choices are `system`, `light`, and `dark`; `system` follows OS changes, manual overrides persist in local extension storage, and changes propagate between tabs. Dark mode is ready for v0.1.0; light mode is still being refined. No remote fonts, styles, scripts or icon services are used.
+Palette tokens are in `src/ui/styles.css`. Theme choices are `system`, `light`, and `dark`; `system` follows OS changes, manual overrides persist in local extension storage, and changes propagate between tabs. Dark mode is ready; light mode is still being refined. No remote fonts, styles, scripts or icon services are used.
 
 The brand source is `extension/assets/chat-sweeper-icon.png` (512×512). Builds preserve the artwork and produce 16, 32, 48 and 128-pixel PNGs for the manifest. The original 512-pixel PNG is retained as the only master copy. The supplied icon is also used in the launcher, header, chooser, favicon and README. A white icon tile keeps black lettering visible in both themes. Chrome's [icon guidance](https://developer.chrome.com/docs/extensions/develop/ui/configure-icons) lists the standard sizes; the full wordmark can be hard to read at toolbar scale.
 
@@ -38,11 +40,11 @@ Protection intentionally retains the pre-rebrand `chat-manager:protected:<provid
 
 The shadcn/ui components are copied source, not a runtime component service. `components.json` records the registry configuration and `scripts/vendor.mjs` records source URLs. Normal builds do not fetch registry files. The lockfile pins dependencies. `scripts/notices.mjs` assembles their license notices during builds; third-party license terms remain attached to the generated distribution.
 
-Before releasing, run the browser tests and compare a disposable chat on each live site. Site UI changes, virtualised lists and hidden dates still limit coverage; see [usage](USAGE.md). Firefox requires a separate manifest/background adaptation and is not supported by this package.
+Before releasing, run the browser tests and compare a disposable chat on each live site. Site UI changes and virtualised lists still limit coverage; see [usage](USAGE.md). Firefox requires a separate manifest/background adaptation and is not supported by this package.
 
 ## UI structure
 
-Only 50 chat rows are rendered per page. Selection applies to the visible page while the delete action accounts for selections elsewhere. Protected and unprotected filters share one list; unresolved protected IDs are shown only in the Protected filter. Date sorting remains, but range inputs and unreliable project-folder management are omitted. About contains credits and the repository link. The stronger control-border token supplements the original surface palette.
+Only 50 chat rows are rendered per page. Selection applies to the visible page while the delete action accounts for selections elsewhere. Protected and unprotected filters share one list; unresolved protected IDs are shown only in the Protected filter. Sorting supports discovery order and full titles A–Z/Z–A. Unreliable project-folder management is omitted. About contains credits and the repository link. The stronger control-border token supplements the original surface palette.
 
 ## Gemini detection and About positioning
 
@@ -64,11 +66,13 @@ Chat rows are reused by ID instead of replaced on every update. Protection saves
 
 The protected highlight is drawn inside the existing row border so title spacing stays fixed. Browser fixtures simulate delayed storage writes and check row identity, focus, scroll, geometry and pending-save guards.
 
-## Date availability and scan notices
+## Sorting and scan notices
 
-Date parsing and the sidebar observer share the same timestamp-attribute list. Timestamps supplied after a row mounts, or updated in place, refresh automatically. Changing Sort also rereads the current rows. Date availability counts only matching chats; with no readable dates, the sort note explicitly describes the discovery-order fallback. Date sorting never starts a scan.
+Sorting uses discovery order or the full chat title. Changing Sort rereads current sidebar entries without starting a scan. Ordinary rows show their title and ID without an empty metadata line; protection and deletion state labels and unresolved-protection notes remain available when relevant.
 
-Status messages share a single line: selection, sorting, scanning and deletion replace the previous message when the user takes a new action. Longer messages are clipped with an ellipsis and available in full on hover. A visible non-scrollable sidebar gets a neutral completion message rather than instructions to expand it. Dates still come only from page metadata, without private APIs or inferred timestamps. Date and discovery fixtures cover these cases.
+Selection, sorting, scanning and deletion replace the previous Status message when the user takes a new action. Visible summaries use at most five words and 32 characters; known long errors have concise messages, and unexpected errors direct the user to the full details. The full message remains in the hover tooltip and accessible label. Status is at least 44px tall to match dropdowns, and summaries wrap on narrow screens without an ellipsis. A visible non-scrollable sidebar gets a neutral completion message rather than instructions to expand it. Status, sorting and discovery fixtures cover these cases.
+
+Chat dates, timestamp extraction, date sorting and date ranges have been removed. They are a potential future feature if OpenAI and Google expose reliable timestamps through supported interfaces. Do not infer dates from sidebar order or add private API calls to obtain them.
 
 ## List-based deletion
 
@@ -78,6 +82,6 @@ A deletion run snapshots discovered rows in the chosen sort order and freezes it
 
 The existing site-menu queue, persistent protection checks, Stop behaviour and disappearance verification remain in use. Browser fixtures cover direct deletion, stopping before a menu opens, protection added during confirmation, failures, title truncation, full-title searching, hidden targets, protected neighbours, automatic page/scroll following and automatic return to the normal list.
 
-Global totals, selection details, date notices and operation results share the Status area. During a deletion run, the Deleted metric carries progress while the message simply says “Deleting…”. Select all stays visible and disabled during deletion. The provider name has a green detection dot and no button border.
+Global totals, selection details and operation results share the Status area. During a deletion run, the Deleted metric carries progress while the message simply says “Deleting…”. Select all stays visible and disabled during deletion. The provider name has a green detection dot and no button border.
 
-Shared sizing tokens keep search/dropdown text, header controls and checkbox targets consistent. Search and selects use the same explicit focus border and outline. Native checkbox semantics are preserved with custom checked/indeterminate visuals and a forced-colours fallback. Status uses the neutral control border instead of a selection accent.
+Shared sizing tokens keep search/dropdown text, header controls and checkbox targets consistent. Controls and chat rows use 2px borders; counters use 1px borders. Focus and hover highlight the existing control border without an extra outline or ring. About retains the field background when hovered. Native checkbox semantics are preserved with custom checked/indeterminate visuals and a forced-colours fallback. The Status section has no enclosing background, border or divider.

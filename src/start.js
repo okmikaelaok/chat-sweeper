@@ -12,7 +12,8 @@ function selectSlide(index) {
   selectedSlide = (index + slides.length) % slides.length;
   slides.forEach((slide, slideIndex) => {
     const offset = (slideIndex - selectedSlide + slides.length) % slides.length;
-    slide.dataset.position = offset === 0 ? 'current' : offset === 1 ? 'next' : 'previous';
+    slide.dataset.position = offset === 0 ? 'current' : offset === 1 ? 'next' : offset === slides.length - 1 ? 'previous' : 'hidden';
+    slide.hidden = slide.dataset.position === 'hidden';
     slide.setAttribute('aria-label', (offset === 0 ? 'Expand ' : 'Show ') + slide.dataset.caption + ' screenshot');
     if (offset === 0) slide.setAttribute('aria-current', 'true');
     else slide.removeAttribute('aria-current');

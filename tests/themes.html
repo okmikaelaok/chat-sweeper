@@ -34,7 +34,7 @@
     assert(root.querySelectorAll('svg.lucide').length>=10,'Bundled Lucide icons present');
     root.getElementById('panel').hidden=false;
     assert(getComputedStyle(root.getElementById('panel')).backgroundColor==='rgb(24, 24, 31)','Actual panel matches the screenshot surface');
-    assert(getComputedStyle(root.getElementById('systemStatus')).backgroundColor==='rgb(48, 39, 64)','Status uses dark purple rather than bright purple');
+    assert(getComputedStyle(root.getElementById('systemStatus')).backgroundColor==='rgba(0, 0, 0, 0)','Status panel is transparent');
     assert(getComputedStyle(root.getElementById('selection')).color==='rgb(167, 139, 250)','Selected total uses the bright purple accent');
     assert(getComputedStyle(root.querySelector('dialog a')).color==='rgb(167, 139, 250)','Dark About links stay readable');
     const selectedRow=document.createElement('div');selectedRow.className='chat';selectedRow.innerHTML='<input type="checkbox" checked>';root.getElementById('list').append(selectedRow);

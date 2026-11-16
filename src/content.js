@@ -9,6 +9,16 @@
   const ui = ChatSweeperUI;
   root.innerHTML = `<style>${ui.styles}</style>${ui.shells[site.name]}`;
   const $ = id => root.getElementById(id);
+  const scrollbarObserver = new ResizeObserver(entries => {
+    for (const {target} of entries) {
+      if (!target.getClientRects().length) continue;
+      const width = `${target.offsetWidth - target.clientWidth}px`;
+      if (target.style.getPropertyValue('--scrollbar-width') !== width) {
+        target.style.setProperty('--scrollbar-width', width);
+      }
+    }
+  });
+  for (const section of [root.querySelector('.controls'), $('list')]) scrollbarObserver.observe(section);
   const chats = new Map();
   const selected = new Set();
   const savingProtection = new Set();
@@ -25,7 +35,42 @@
     if (node.textContent !== text) node.textContent = text;
   };
   let statusSource = 'protection';
-  const status = (message, source = null, detail = message) => { setText('status', message); $('status').title = detail; statusSource = source; };
+  function briefStatus(message, source) {
+    const text = String(message || '').replace(/\s+/g, ' ').trim().replace(/…$/, '');
+    const fits = value => value.split(/\s+/).filter(Boolean).length <= 5 && Array.from(value).length <= 32;
+    if (fits(text)) return text;
+    const offPage = text.match(/^Deletion is permanent · (\d+) off-page\.$/);
+    if (offPage) {
+      const summary = `Permanent; ${offPage[1]} off-page.`;
+      return fits(summary) ? summary : 'Off-page selections. Review.';
+    }
+    const summaries = [
+      [/^Protection changed/i, 'Protection changed. Review.'],
+      [/^Loading protection/i, 'Loading protection.'],
+      [/^Scan limit reached/i, 'Scan limit reached. Load more.'],
+      [/identifiers could not be read/i, 'Chat IDs unavailable.'],
+      [/^No chats detected/i, 'No chats found. Check sidebar.'],
+      [/is protected.*Deletion stopped/i, 'Chat protected. Stopped.'],
+      [/^Close the open/i, 'Close the open popup.'],
+      [/^Stopped before|^Deletion stopped/i, 'Deletion stopped.'],
+      [/^Cannot locate/i, 'Chat not found. Stopped.'],
+      [/expected control did not appear/i, 'Site control missing. Stopped.'],
+      [/^Could not identify this chat/i, 'Chat menu unavailable.'],
+      [/^Unrecognised confirmation/i, 'Confirmation not recognised.'],
+      [/^Could not identify.*Delete confirmation/i, 'Delete confirmation unavailable.'],
+      [/^Theme changed/i, 'Theme preference not saved.'],
+      [/^Theme preference/i, 'Theme preference unavailable.'],
+    ];
+    return summaries.find(([pattern]) => pattern.test(text))?.[1]
+      || (source === 'deletion' ? 'Deletion failed. Check details.' : 'Action stopped. Check details.');
+  }
+  const status = (message, source = null, detail = message) => {
+    setText('status', briefStatus(message, source));
+    $('status').title = detail;
+    if (detail) $('status').setAttribute('aria-label', detail);
+    else $('status').removeAttribute('aria-label');
+    statusSource = source;
+  };
   const protectionError = error => status(error.message, null, 'Protection unavailable. Deletion is disabled; reload this tab to retry.' + (error.cause?.message ? ' Browser error: ' + error.cause.message : ''));
   ChatSweeperTheme.mount(host, $('theme'), status);
   const protection = ChatProtection.create(site.name.toLowerCase(), changedIds => {
@@ -45,9 +90,7 @@
       if (!title) continue;
       const previous = chats.get(id);
       if (previous?.unresolved) chats.delete(id); // Restore actual sidebar order when a saved ID is discovered.
-      const dateRow = site.row(link);
-      const date = ChatDates.read(dateRow) || previous?.date || null;
-      chats.set(id, { id, title, date, url: site.url(link) });
+      chats.set(id, { id, title, url: site.url(link) });
       seen.push(id);
     }
     if (prioritizeTop && seen.length) {
@@ -68,14 +111,13 @@
   }
   function orderRows(rows) {
     const sort = $('sort').value;
-    if (sort === 'oldest' || sort === 'newest') rows.sort((a,b) => ChatDates.compare(a,b,sort));
-    else if (sort !== 'sidebar') rows.sort((a,b) => a.title.localeCompare(b.title) * (sort === 'az' ? 1 : -1));
+    if (sort === 'az' || sort === 'za') rows.sort((a,b) => a.title.localeCompare(b.title) * (sort === 'az' ? 1 : -1));
     return rows;
   }
   function syncSavedProtection() {
     for (const [id, chat] of chats) if (chat.unresolved && !protection.has(id)) chats.delete(id);
     for (const id of protection.ids) if (!chats.has(id)) {
-      chats.set(id, {id, title:'Protected chat · ' + id, date:null, url:site.urlForId(id), unresolved:true});
+      chats.set(id, {id, title:'Protected chat · ' + id, url:site.urlForId(id), unresolved:true});
     }
   }
   function pageRows(rows = filtered()) { return rows.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE); }
@@ -93,10 +135,6 @@
     const locked = navigatingLocked || !!deletionRun;
     setText('count', [...chats.values()].filter(c => !c.unresolved).length);
     setText('protectedCount', protection.count);
-    const known = rows.filter(c => c.date).length;
-    const dateSort = !deletionRun && ['oldest','newest'].includes($('sort').value);
-    const dateInfo = known ? 'Dates: ' + known + '/' + rows.length + '; undated last.' : 'No dates; using discovery order.';
-    if (statusSource === 'sort') status(dateSort && rows.length ? dateInfo : '', 'sort');
     setText('selectionMetricLabel', deletionRun ? 'Deleted' : 'Selected');
     setText('pageInfo', rows.length ? 'Page ' + (currentPage + 1) + ' of ' + Math.ceil(rows.length / PAGE_SIZE) : 'No chats');
     $('previousPage').disabled = navigatingLocked || currentPage === 0;
@@ -133,16 +171,16 @@
     const a = document.createElement('a');
     const title = document.createElement('span'); title.className = 'chat-title';
     const metadata = document.createElement('small'); metadata.className = 'chat-meta'; metadata.id = 'chat-meta-' + id;
-    const dateLabel = document.createElement('span'); dateLabel.className = 'chat-date';
+    const savedLabel = document.createElement('span'); savedLabel.className = 'chat-note'; savedLabel.hidden = true;
     const stateLabel = document.createElement('span'); stateLabel.className = 'chat-state'; stateLabel.hidden = true;
-    metadata.append(dateLabel, stateLabel);
+    metadata.append(savedLabel, stateLabel); metadata.hidden = true;
     const idLabel = document.createElement('small'); idLabel.className = 'chat-id'; idLabel.id = 'chat-id-' + id; idLabel.textContent = 'ID: ' + id;
     a.append(title, metadata, idLabel);
     a.setAttribute('aria-describedby', metadata.id + ' ' + idLabel.id);
     const lock = document.createElement('button'); lock.className = 'lock'; lock.innerHTML = ui.icons.shield;
     lock.onclick = () => setProtection(id, !protection.has(id));
     row.append(check, a, lock);
-    return {row, check, a, title, dateLabel, stateLabel, lock};
+    return {row, check, a, title, metadata, savedLabel, stateLabel, lock};
   }
   function renderChatRows(visibleRows, locked) {
     const list = $('list');
@@ -162,7 +200,7 @@
     visibleRows.forEach((chat, index) => {
       let view = rowViews.get(chat.id);
       if (!view) { view = createChatRow(chat.id); rowViews.set(chat.id, view); }
-      const {row, check, a, title, dateLabel, stateLabel, lock} = view;
+      const {row, check, a, title, metadata, savedLabel, stateLabel, lock} = view;
       const protectedChat = protection.has(chat.id), saving = savingProtection.has(chat.id);
       row.className = protectedChat ? 'chat protected' : 'chat';
       row.dataset.chatId = chat.id;
@@ -173,6 +211,10 @@
       const stateText = {protected:deletionRun ? 'Protected · skipped' : 'Protected', queued:'Queued', deleting:'Deleting…', deleted:'Deleted', error:'Check required', stopped:'Not deleted'}[state] || '';
       stateLabel.hidden = !stateText;
       if (stateLabel.textContent !== stateText) stateLabel.textContent = stateText;
+      savedLabel.hidden = !chat.unresolved;
+      const savedText = chat.unresolved ? 'Saved protection · not loaded in this sidebar' : '';
+      if (savedLabel.textContent !== savedText) savedLabel.textContent = savedText;
+      metadata.hidden = !stateText && !chat.unresolved;
       check.checked = selected.has(chat.id); check.disabled = locked || !protection.ready || protectedChat || saving;
       check.setAttribute('aria-label', 'Select ' + chat.title);
       const displayedTitle = shortTitle(chat.title);
@@ -180,8 +222,6 @@
       a.title = chat.title; a.setAttribute('aria-label', chat.title);
       if (a.getAttribute('href') !== chat.url) a.setAttribute('href', chat.url);
       a.onclick = locked ? e => e.preventDefault() : null;
-      const dateText = chat.unresolved ? 'Saved protection · not loaded in this sidebar' : chat.date ? 'Date: ' + chat.date : 'Date unknown';
-      if (dateLabel.textContent !== dateText) dateLabel.textContent = dateText;
       lock.title = saving ? 'Saving protection…' : protectedChat ? 'Unprotect chat' : 'Protect chat (prevent deletion)';
       lock.disabled = locked || !protection.ready;
       lock.setAttribute('aria-disabled', String(lock.disabled || saving));
@@ -408,7 +448,7 @@
     if (records.some(site.isRelevantMutation)) scheduleSidebarRefresh();
   }).observe(document.body, {
     childList:true, subtree:true, characterData:true, attributes:true,
-    attributeFilter:[...ChatDates.attributes,'href','data-conversation-id','data-chat-id','data-test-id','data-testid','jslog','id','title','aria-label','class']
+    attributeFilter:['href','data-conversation-id','data-chat-id','data-test-id','data-testid','jslog','id','title','aria-label','class']
   });
   window.addEventListener('focus',scheduleSidebarRefresh);
   window.addEventListener('popstate',scheduleSidebarRefresh);
