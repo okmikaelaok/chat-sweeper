@@ -1,0 +1,5 @@
+extension/
+licenses/
+docs/
+*.md
+package-lock.json

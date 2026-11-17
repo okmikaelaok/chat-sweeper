@@ -1,17 +1,17 @@
-import * as React from "react"
-import type { LucideIcon } from "lucide-react"
+import * as React from "react";
+import type { LucideIcon } from "lucide-react";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 
 type SelectOption = {
-  value: string
-  label: string
-  icon: LucideIcon
-}
+  value: string;
+  label: string;
+  icon: LucideIcon;
+};
 
 type SelectProps = React.SelectHTMLAttributes<HTMLSelectElement> & {
-  options: SelectOption[]
-}
+  options: SelectOption[];
+};
 
 // Keep native selection, keyboard navigation and form events in the static UI.
 // The customizable picker is styled with the same tokens as our shadcn controls.
@@ -25,5 +25,5 @@ export function Select({ className, options, ...props }: SelectProps) {
         </option>
       ))}
     </select>
-  )
+  );
 }

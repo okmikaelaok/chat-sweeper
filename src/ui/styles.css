@@ -23,26 +23,24 @@
   --color-ring: var(--primary);
 }
 
-@media (prefers-color-scheme:dark) {
-
+@media (prefers-color-scheme: dark) {
   :root:not([data-theme]),
   :host(:not([data-theme])) {
-    --background: #0B0B10;
-    --card: #18181F;
-    --border: #30303B;
-    --primary: #A78BFA;
+    --background: #0b0b10;
+    --card: #18181f;
+    --border: #30303b;
+    --primary: #a78bfa;
     --accent: #302740;
-    --foreground: #F4F4F5;
-    --muted-foreground: #A1A1AA;
-    --destructive: #FB7185;
-    --primary-foreground: #0B0B10;
-    --destructive-foreground: #0B0B10;
+    --foreground: #f4f4f5;
+    --muted-foreground: #a1a1aa;
+    --destructive: #fb7185;
+    --primary-foreground: #0b0b10;
+    --destructive-foreground: #0b0b10;
     color-scheme: dark;
   }
 }
 
 @layer base {
-
   *,
   ::before,
   ::after {
@@ -137,7 +135,7 @@ option {
   align-items: end;
 }
 
-.row>* {
+.row > * {
   flex: 1;
   min-width: 0;
 }
@@ -162,7 +160,7 @@ option {
 input:disabled,
 select:disabled {
   cursor: default;
-  opacity: .45;
+  opacity: 0.45;
 }
 
 .chat:hover {
@@ -173,7 +171,7 @@ select:disabled {
   box-shadow: inset 2px 0 0 var(--primary);
 }
 
-.lock[aria-busy=true] {
+.lock[aria-busy="true"] {
   cursor: progress;
 }
 
@@ -188,7 +186,7 @@ select:disabled {
 }
 
 button:disabled {
-  opacity: .45;
+  opacity: 0.45;
 }
 
 dialog::backdrop {
@@ -213,7 +211,7 @@ dialog::backdrop {
   align-items: center;
   font-size: 19px;
   font-weight: 750;
-  letter-spacing: -.5px;
+  letter-spacing: -0.5px;
   color: var(--foreground);
   text-decoration: none;
 }
@@ -252,7 +250,7 @@ dialog::backdrop {
   text-align: left;
 }
 
-.site-cards>div {
+.site-cards > div {
   box-shadow: none;
 }
 
@@ -273,7 +271,7 @@ dialog::backdrop {
 .site-card-content h2 {
   font-size: 19px;
   font-weight: 650;
-  letter-spacing: -.4px;
+  letter-spacing: -0.4px;
   margin-top: 16px;
 }
 
@@ -324,8 +322,7 @@ dialog::backdrop {
   height: 10px;
 }
 
-@media(prefers-reduced-motion:reduce) {
-
+@media (prefers-reduced-motion: reduce) {
   *,
   ::before,
   ::after {
@@ -338,19 +335,21 @@ dialog::backdrop {
 /* Larger controls and stronger outlines on the original palette surfaces. */
 :root,
 :host {
-  --background: #FAFAFC;
-  --card: #FFFFFF;
-  --border: #E5E7EB;
-  --primary: #7C3AED;
-  --accent: #F3E8FF;
-  --foreground: #18181B;
-  --muted-foreground: #71717A;
-  --destructive: #DC2626;
-  --primary-foreground: #FFFFFF;
-  --destructive-foreground: #FFFFFF;
+  --background: #fafafc;
+  --card: #ffffff;
+  --border: #e5e7eb;
+  --primary: #7c3aed;
+  --accent: #f3e8ff;
+  --foreground: #18181b;
+  --muted-foreground: #71717a;
+  --destructive: #dc2626;
+  --primary-foreground: #ffffff;
+  --destructive-foreground: #ffffff;
   color-scheme: light;
-  --control-border: #8A8F9C;
-  --control-font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --control-border: #8a8f9c;
+  --control-font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
   --control-font-size: 15px;
   --field-height: 44px;
   --header-control-size: 36px;
@@ -358,32 +357,32 @@ dialog::backdrop {
   --page-control-size: 32px;
 }
 
-:root[data-theme=dark],
-:host([data-theme=dark]) {
-  --background: #0B0B10;
-  --card: #18181F;
-  --border: #30303B;
-  --primary: #A78BFA;
+:root[data-theme="dark"],
+:host([data-theme="dark"]) {
+  --background: #0b0b10;
+  --card: #18181f;
+  --border: #30303b;
+  --primary: #a78bfa;
   --accent: #302740;
-  --foreground: #F4F4F5;
-  --muted-foreground: #A1A1AA;
-  --destructive: #FB7185;
-  --primary-foreground: #0B0B10;
-  --destructive-foreground: #0B0B10;
+  --foreground: #f4f4f5;
+  --muted-foreground: #a1a1aa;
+  --destructive: #fb7185;
+  --primary-foreground: #0b0b10;
+  --destructive-foreground: #0b0b10;
   color-scheme: dark;
   --control-border: #555363;
-  --info: #60A5FA;
-  --info-bg: #1D3049;
-  --info-border: #36577A;
-  --success: #4ADE80;
-  --success-bg: #1C382C;
-  --success-border: #35664A;
-  --warning: #FB923C;
-  --warning-bg: #402A20;
+  --info: #60a5fa;
+  --info-bg: #1d3049;
+  --info-border: #36577a;
+  --success: #4ade80;
+  --success-bg: #1c382c;
+  --success-border: #35664a;
+  --warning: #fb923c;
+  --warning-bg: #402a20;
   --warning-border: #855332;
-  --danger: #FB7185;
+  --danger: #fb7185;
   --danger-bg: #442530;
-  --danger-border: #8B4251;
+  --danger-border: #8b4251;
 }
 
 :host {
@@ -427,7 +426,7 @@ dialog::backdrop {
 
 .brand-row h1 {
   line-height: 1.25;
-  letter-spacing: -.7px;
+  letter-spacing: -0.7px;
   font-weight: 750;
   margin: 0;
   font-size: 24px;
@@ -526,7 +525,7 @@ dialog button svg {
   height: 8px;
   flex-shrink: 0;
   border-radius: 50%;
-  background: var(--success, #16A34A);
+  background: var(--success, #16a34a);
 }
 
 .theme-control {
@@ -552,7 +551,10 @@ dialog button svg {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   padding: 12px var(--panel-inline-padding);
-  padding-inline-end: max(0px, calc(var(--panel-inline-padding) - var(--scrollbar-width, 0px)));
+  padding-inline-end: max(
+    0px,
+    calc(var(--panel-inline-padding) - var(--scrollbar-width, 0px))
+  );
   overflow: auto;
   scrollbar-gutter: stable;
   flex-shrink: 0;
@@ -570,7 +572,7 @@ dialog button svg {
   border-radius: 9px;
 }
 
-.search-wrap>svg {
+.search-wrap > svg {
   position: absolute;
   color: var(--muted-foreground);
   width: 18px;
@@ -585,7 +587,7 @@ dialog button svg {
   gap: 6px;
 }
 
-.field>span {
+.field > span {
   font-size: 13px;
   font-weight: 600;
   color: var(--foreground);
@@ -648,7 +650,9 @@ dialog button svg {
     border-radius: 12px;
     background: var(--card);
     color: var(--foreground);
-    box-shadow: 0 10px 24px #0002, 0 2px 5px #0001;
+    box-shadow:
+      0 10px 24px #0002,
+      0 2px 5px #0001;
     font: 400 var(--control-font-size)/1.4 var(--control-font-family);
   }
 
@@ -720,7 +724,7 @@ dialog a:focus-visible {
 #panel button:focus-visible,
 #launch:focus-visible,
 dialog button:focus-visible,
-input[type=checkbox]:focus-visible {
+input[type="checkbox"]:focus-visible {
   border-color: var(--primary) !important;
   outline: none;
   box-shadow: none;
@@ -751,7 +755,7 @@ input[type=checkbox]:focus-visible {
   background: var(--background);
 }
 
-input[type=checkbox] {
+input[type="checkbox"] {
   appearance: none;
   display: grid;
   place-content: center;
@@ -768,7 +772,7 @@ input[type=checkbox] {
   cursor: pointer;
 }
 
-input[type=checkbox]::before {
+input[type="checkbox"]::before {
   content: "";
   width: 18px;
   height: 18px;
@@ -777,21 +781,21 @@ input[type=checkbox]::before {
   transform: scale(0);
 }
 
-input[type=checkbox]:not(:disabled):hover {
+input[type="checkbox"]:not(:disabled):hover {
   border-color: var(--primary);
 }
 
-input[type=checkbox]:checked,
-input[type=checkbox]:indeterminate {
+input[type="checkbox"]:checked,
+input[type="checkbox"]:indeterminate {
   background: var(--primary);
   border-color: var(--primary);
 }
 
-input[type=checkbox]:checked::before {
+input[type="checkbox"]:checked::before {
   transform: scale(1);
 }
 
-input[type=checkbox]:indeterminate::before {
+input[type="checkbox"]:indeterminate::before {
   width: 14px;
   height: 3px;
   border-radius: 1px;
@@ -799,13 +803,13 @@ input[type=checkbox]:indeterminate::before {
   transform: scale(1);
 }
 
-@media (forced-colors:active) {
-  input[type=checkbox] {
+@media (forced-colors: active) {
+  input[type="checkbox"] {
     appearance: auto;
     forced-color-adjust: auto;
   }
 
-  input[type=checkbox]::before {
+  input[type="checkbox"]::before {
     display: none;
   }
 }
@@ -817,13 +821,16 @@ input[type=checkbox]:indeterminate::before {
   flex: 1;
   padding: 7px var(--panel-inline-padding);
   /* Keep row edges aligned while the scrollbar occupies the outer inset. */
-  padding-inline-end: max(0px, calc(var(--panel-inline-padding) - var(--scrollbar-width, 0px)));
+  padding-inline-end: max(
+    0px,
+    calc(var(--panel-inline-padding) - var(--scrollbar-width, 0px))
+  );
   min-height: 80px;
   border-top: 1.5px solid var(--control-border);
   box-shadow: inset 0 6px 8px -8px #0004;
 }
 
-#list>p {
+#list > p {
   padding: 28px 16px;
   text-align: center;
   color: var(--muted-foreground);
@@ -834,7 +841,7 @@ input[type=checkbox]:indeterminate::before {
   display: flex;
   align-items: center;
   border-radius: 10px;
-  transition: background .12s;
+  transition: background 0.12s;
   gap: 12px;
   border: 2px solid var(--border);
   padding: 14px 10px;
@@ -885,22 +892,22 @@ input[type=checkbox]:indeterminate::before {
   color: var(--primary);
 }
 
-.chat[data-state=deleting] {
+.chat[data-state="deleting"] {
   background: var(--accent);
   border-color: var(--primary);
   box-shadow: inset 3px 0 0 var(--primary);
 }
 
-.chat[data-state=deleted] .chat-title {
+.chat[data-state="deleted"] .chat-title {
   text-decoration: line-through;
   color: var(--muted-foreground);
 }
 
-.chat[data-state=error] {
+.chat[data-state="error"] {
   border-color: var(--destructive);
 }
 
-.chat[data-state=error] .chat-state {
+.chat[data-state="error"] .chat-state {
   color: var(--destructive);
 }
 
@@ -925,7 +932,7 @@ input[type=checkbox]:indeterminate::before {
   background: var(--background);
 }
 
-.lock[aria-pressed=true] {
+.lock[aria-pressed="true"] {
   color: var(--primary);
   background: var(--accent);
   border-color: var(--primary) !important;
@@ -950,7 +957,7 @@ input[type=checkbox]:indeterminate::before {
   white-space: nowrap;
 }
 
-#panel>footer {
+#panel > footer {
   padding: 10px var(--panel-inline-padding);
   padding-bottom: 12px;
   flex-shrink: 0;
@@ -970,19 +977,19 @@ input[type=checkbox]:indeterminate::before {
   color: var(--foreground);
 }
 
-#panel #delete[data-action=return] {
+#panel #delete[data-action="return"] {
   background: var(--background);
   color: var(--foreground);
   border-color: var(--control-border);
 }
 
-#panel #delete[data-action=return]:enabled:hover {
+#panel #delete[data-action="return"]:enabled:hover {
   background: var(--accent);
   color: var(--foreground);
   filter: none;
 }
 
-#delete[data-action=return]>svg {
+#delete[data-action="return"] > svg {
   display: none;
 }
 
@@ -1032,17 +1039,17 @@ input[type=checkbox]:indeterminate::before {
   box-sizing: border-box;
   padding: 8px 10px;
   border-radius: 9px;
-  background: #FFF7ED;
-  color: #9A3412;
+  background: #fff7ed;
+  color: #9a3412;
   font-size: var(--control-font-size);
   font-weight: 600;
   line-height: 1.4;
 }
 
-:root[data-theme=dark] #statusLabel,
-:host([data-theme=dark]) #statusLabel {
-  background: #402A20;
-  color: #FB923C;
+:root[data-theme="dark"] #statusLabel,
+:host([data-theme="dark"]) #statusLabel {
+  background: #402a20;
+  color: #fb923c;
 }
 
 #status {
@@ -1064,14 +1071,14 @@ input[type=checkbox]:indeterminate::before {
   margin: 0;
 }
 
-.status-counts>div {
+.status-counts > div {
   padding: 6px 8px;
   background: var(--card);
   border: 1px solid var(--control-border);
   border-radius: 7px;
 }
 
-.status-counts>div:has(#selection) {
+.status-counts > div:has(#selection) {
   background: var(--accent);
   border-color: var(--primary);
 }
@@ -1126,7 +1133,7 @@ dialog {
 }
 
 dialog h2 {
-  letter-spacing: -.6px;
+  letter-spacing: -0.6px;
   font-weight: 700;
   margin: 12px 0 8px;
   font-size: 23px;
@@ -1223,26 +1230,32 @@ dialog a {
 }
 
 /* Semantic colours are scoped to the resolved dark theme, including shadow UI. */
-:root[data-theme=dark],
-:host([data-theme=dark]) {
-  & .status-counts>div:has(#count) {
+:root[data-theme="dark"],
+:host([data-theme="dark"]) {
+  & .status-counts > div:has(#count) {
     background: var(--info-bg);
     border-color: var(--info-border);
   }
 
-  & #count { color: var(--info); }
+  & #count {
+    color: var(--info);
+  }
 
-  & .status-counts>div:has(#protectedCount) {
+  & .status-counts > div:has(#protectedCount) {
     background: var(--success-bg);
     border-color: var(--success-border);
   }
 
   & #protectedCount,
-  & .chat[data-state=protected] .chat-state { color: var(--success); }
+  & .chat[data-state="protected"] .chat-state {
+    color: var(--success);
+  }
 
-  & .chat.protected { box-shadow: inset 2px 0 0 var(--success); }
+  & .chat.protected {
+    box-shadow: inset 2px 0 0 var(--success);
+  }
 
-  & #panel .lock[aria-pressed=true],
+  & #panel .lock[aria-pressed="true"],
   & #panel .lock:enabled:hover {
     color: var(--success);
     background: var(--success-bg);
@@ -1261,7 +1274,7 @@ dialog a {
     border-color: var(--danger-border);
   }
 
-  & #panel #delete:not([data-action=return]) {
+  & #panel #delete:not([data-action="return"]) {
     color: var(--danger);
     background: var(--danger-bg);
     border-color: var(--danger-border);
@@ -1273,34 +1286,40 @@ dialog a {
   }
 
   & #panel #stop:enabled:hover,
-  & #panel #delete:not([data-action=return]):enabled:hover {
+  & #panel #delete:not([data-action="return"]):enabled:hover {
     background: color-mix(in srgb, var(--danger-bg) 82%, var(--danger));
     border-color: var(--danger);
     color: var(--danger);
     filter: none;
   }
 
-  & .chat[data-state=stopped] {
+  & .chat[data-state="stopped"] {
     background: var(--warning-bg);
     border-color: var(--warning-border);
   }
 
-  & .chat[data-state=stopped] .chat-state { color: var(--warning); }
+  & .chat[data-state="stopped"] .chat-state {
+    color: var(--warning);
+  }
 
-  & .chat[data-state=deleted],
-  & .chat[data-state=deleting],
-  & .chat[data-state=error] {
+  & .chat[data-state="deleted"],
+  & .chat[data-state="deleting"],
+  & .chat[data-state="error"] {
     background: var(--danger-bg);
     border-color: var(--danger-border);
   }
 
-  & .chat[data-state=deleting] { box-shadow: inset 3px 0 0 var(--danger); }
-  & .chat[data-state=deleted] .chat-state,
-  & .chat[data-state=deleting] .chat-state,
-  & .chat[data-state=error] .chat-state { color: var(--danger); }
+  & .chat[data-state="deleting"] {
+    box-shadow: inset 3px 0 0 var(--danger);
+  }
+  & .chat[data-state="deleted"] .chat-state,
+  & .chat[data-state="deleting"] .chat-state,
+  & .chat[data-state="error"] .chat-state {
+    color: var(--danger);
+  }
 }
 
-@media(max-width:520px) {
+@media (max-width: 520px) {
   .welcome {
     padding: 24px;
   }
@@ -1346,7 +1365,7 @@ dialog a {
   }
 }
 
-@media(max-height:760px) {
+@media (max-height: 760px) {
   .provider-row {
     margin: 10px 0 0;
   }
@@ -1360,21 +1379,20 @@ dialog a {
     gap: 10px;
   }
 
-  #panel>footer {
+  #panel > footer {
     padding-block: 10px 12px;
   }
 
   .status-panel {
     margin-bottom: 16px;
   }
-
 }
 
 #status:empty {
   display: none;
 }
 
-@media(max-height:600px) {
+@media (max-height: 600px) {
   #panel {
     overflow-y: auto;
   }

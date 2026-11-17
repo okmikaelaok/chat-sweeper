@@ -1,60 +1,248 @@
-<!doctype html><meta charset="utf-8"><title>ChatSweeper theme tests</title>
-<link rel="stylesheet" href="../extension/assets/styles.css">
-<body><pre id="result">RUNNING</pre><select id="theme"><option>system</option><option>light</option><option>dark</option></select>
-<script>globalThis.chrome = {}; const media = {matches:true, listeners:[], addEventListener(type, listener){this.listeners.push(listener);}}; globalThis.matchMedia = () => media;</script>
-<script src="storage.js"></script><script src="../extension/theme.js"></script><script src="../extension/ui.js"></script>
-<script>
-(async()=>{
-  let checks=0; const assert=(ok,message)=>{if(!ok)throw new Error(message);checks++;};
-  const tick=()=>new Promise(resolve=>setTimeout(resolve,0));
-  try {
-    const select=document.getElementById('theme'), target=document.documentElement;
-    ChatSweeperTheme.mount(target,select); await tick();
-    assert(target.dataset.theme==='dark' && select.value==='system','System detects dark theme');
-    assert(getComputedStyle(target).getPropertyValue('--background').trim().toUpperCase()==='#0B0B10','Dark background matches the panel screenshots');
-    const change=value=>{select.value=value;select.dispatchEvent(new Event('change'));};
-    change('light'); await tick();
-    assert(target.dataset.theme==='light','Manual light override');
-    assert(storageFixture.data['chatsweeper:theme']==='light','Preference saved locally');
-    assert(getComputedStyle(target).getPropertyValue('--primary').trim().toUpperCase()==='#7C3AED','Light violet matches palette');
-    media.listeners.forEach(fn=>fn()); assert(target.dataset.theme==='light','System change preserves manual setting');
-    change('system'); assert(target.dataset.theme==='dark','System option follows OS');
-    media.matches=false;media.listeners.forEach(fn=>fn()); assert(target.dataset.theme==='light','Live OS change updates system mode');
-    await chrome.storage.local.set({'chatsweeper:theme':'dark'}); assert(target.dataset.theme==='dark' && select.value==='dark','Theme synchronises across tabs');
-    assert(getComputedStyle(target).getPropertyValue('--destructive').trim().toUpperCase()==='#FB7185','Dark danger matches palette');
-    const restored=document.createElement('div'), restoredSelect=select.cloneNode(true);document.body.append(restored,restoredSelect);
-    ChatSweeperTheme.mount(restored,restoredSelect);await tick();assert(restored.dataset.theme==='dark','Saved preference restores on a new instance');
-    await chrome.storage.local.set({'chatsweeper:theme':'invalid'});assert(target.dataset.themeMode==='system','Invalid preference falls back to system');
-    const race=document.createElement('div'), raceSelect=select.cloneNode(true);ChatSweeperTheme.mount(race,raceSelect);raceSelect.value='dark';raceSelect.dispatchEvent(new Event('change'));await tick();assert(race.dataset.theme==='dark','Initial storage read cannot override a manual change');
-    const host=document.createElement('div');document.body.append(host);const root=host.attachShadow({mode:'open'});root.innerHTML=`<style>${ChatSweeperUI.styles}</style>${ChatSweeperUI.shells.ChatGPT}`;
-    const darkSelect=root.getElementById('theme');ChatSweeperTheme.mount(host,darkSelect);await tick();
-    assert(getComputedStyle(host).getPropertyValue('--card').trim().toUpperCase()==='#18181F','Shadow DOM receives the screenshot palette');
-    assert(root.getElementById('panel').getAttribute('aria-label')==='ChatSweeper for ChatGPT','Brand and provider accessibility label');
-    assert(root.textContent.includes('Select. Manage. Keep or Sweep.'),'Subtitle present');
-    assert(root.querySelectorAll('svg.lucide').length>=10,'Bundled Lucide icons present');
-    root.getElementById('panel').hidden=false;
-    assert(getComputedStyle(root.getElementById('panel')).backgroundColor==='rgb(24, 24, 31)','Actual panel matches the screenshot surface');
-    assert(getComputedStyle(root.getElementById('systemStatus')).backgroundColor==='rgba(0, 0, 0, 0)','Status panel is transparent');
-    assert(getComputedStyle(root.getElementById('selection')).color==='rgb(167, 139, 250)','Selected total uses the bright purple accent');
-    assert(getComputedStyle(root.querySelector('dialog a')).color==='rgb(167, 139, 250)','Dark About links stay readable');
-    const selectedRow=document.createElement('div');selectedRow.className='chat';selectedRow.innerHTML='<input type="checkbox" checked>';root.getElementById('list').append(selectedRow);
-    assert(getComputedStyle(selectedRow).backgroundColor==='rgb(48, 39, 64)' && getComputedStyle(selectedRow).borderTopColor==='rgb(167, 139, 250)','Selected chats use dark purple with a bright purple border');
-    darkSelect.value='light';darkSelect.dispatchEvent(new Event('change'));assert(getComputedStyle(root.getElementById('panel')).backgroundColor==='rgb(255, 255, 255)','Actual panel uses light card colour');
-    assert(!root.getElementById('dateDetails') && !root.getElementById('projects'),'Date and project sections are omitted');
-    assert(parseFloat(getComputedStyle(root.getElementById('search')).fontSize)>=14,'Search text is legible');
-    assert(parseFloat(getComputedStyle(root.getElementById('filter')).fontSize)>=14,'Dropdown text is legible');
-    const closeStyle=getComputedStyle(root.getElementById('close'));
-    assert(parseFloat(closeStyle.borderTopWidth)>=1 && closeStyle.borderTopStyle==='solid','Close button has a visible box');
-    assert(getComputedStyle(root.getElementById('filter')).borderTopColor==='rgb(138, 143, 156)','Light input borders use the stronger contrast colour');
-    assert(root.getElementById('search').getAttribute('aria-label')==='Search chat titles','Search label retained');
-    const fallback=document.createElement('div'), fallbackSelect=select.cloneNode(true);document.body.append(fallback,fallbackSelect);
-    ChatSweeperTheme.mount(fallback,fallbackSelect,undefined,{key:'chatsweeper:start-theme'});await tick();
-    fallbackSelect.value='dark';fallbackSelect.dispatchEvent(new Event('change'));await tick();
-    assert(storageFixture.data['chatsweeper:start-theme']==='dark' && host.dataset.theme==='light','Fallback theme changes do not change the panel');
-    darkSelect.value='dark';darkSelect.dispatchEvent(new Event('change'));await tick();
-    fallbackSelect.value='light';fallbackSelect.dispatchEvent(new Event('change'));await tick();
-    assert(host.dataset.theme==='dark' && fallback.dataset.theme==='light','Panel and fallback retain independent themes');
-    document.getElementById('result').textContent=`PASS: ${checks} theme and branding checks`;
-  } catch(error){document.getElementById('result').textContent='FAIL: '+error.stack;}
-})();
-</script>
+<!doctype html>
+<meta charset="utf-8" />
+<title>ChatSweeper theme tests</title>
+<link rel="stylesheet" href="../extension/assets/styles.css" />
+
+<body>
+  <pre id="result">RUNNING</pre>
+  <select id="theme">
+    <option>system</option>
+    <option>light</option>
+    <option>dark</option>
+  </select>
+  <script>
+    globalThis.chrome = {};
+    const media = {
+      matches: true,
+      listeners: [],
+      addEventListener(type, listener) {
+        this.listeners.push(listener);
+      },
+    };
+    globalThis.matchMedia = () => media;
+  </script>
+  <script src="storage.js"></script>
+  <script src="../extension/theme.js"></script>
+  <script src="../extension/ui.js"></script>
+  <script>
+    (async () => {
+      let checks = 0;
+      const assert = (ok, message) => {
+        if (!ok) throw new Error(message);
+        checks++;
+      };
+      const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
+      try {
+        const select = document.getElementById("theme"),
+          target = document.documentElement;
+        ChatSweeperTheme.mount(target, select);
+        await tick();
+        assert(
+          target.dataset.theme === "dark" && select.value === "system",
+          "System detects dark theme",
+        );
+        assert(
+          getComputedStyle(target)
+            .getPropertyValue("--background")
+            .trim()
+            .toUpperCase() === "#0B0B10",
+          "Dark background matches the panel screenshots",
+        );
+        const change = (value) => {
+          select.value = value;
+          select.dispatchEvent(new Event("change"));
+        };
+        change("light");
+        await tick();
+        assert(target.dataset.theme === "light", "Manual light override");
+        assert(
+          storageFixture.data["chatsweeper:theme"] === "light",
+          "Preference saved locally",
+        );
+        assert(
+          getComputedStyle(target)
+            .getPropertyValue("--primary")
+            .trim()
+            .toUpperCase() === "#7C3AED",
+          "Light violet matches palette",
+        );
+        media.listeners.forEach((fn) => fn());
+        assert(
+          target.dataset.theme === "light",
+          "System change preserves manual setting",
+        );
+        change("system");
+        assert(target.dataset.theme === "dark", "System option follows OS");
+        media.matches = false;
+        media.listeners.forEach((fn) => fn());
+        assert(
+          target.dataset.theme === "light",
+          "Live OS change updates system mode",
+        );
+        await chrome.storage.local.set({ "chatsweeper:theme": "dark" });
+        assert(
+          target.dataset.theme === "dark" && select.value === "dark",
+          "Theme synchronises across tabs",
+        );
+        assert(
+          getComputedStyle(target)
+            .getPropertyValue("--destructive")
+            .trim()
+            .toUpperCase() === "#FB7185",
+          "Dark danger matches palette",
+        );
+        const restored = document.createElement("div"),
+          restoredSelect = select.cloneNode(true);
+        document.body.append(restored, restoredSelect);
+        ChatSweeperTheme.mount(restored, restoredSelect);
+        await tick();
+        assert(
+          restored.dataset.theme === "dark",
+          "Saved preference restores on a new instance",
+        );
+        await chrome.storage.local.set({ "chatsweeper:theme": "invalid" });
+        assert(
+          target.dataset.themeMode === "system",
+          "Invalid preference falls back to system",
+        );
+        const race = document.createElement("div"),
+          raceSelect = select.cloneNode(true);
+        ChatSweeperTheme.mount(race, raceSelect);
+        raceSelect.value = "dark";
+        raceSelect.dispatchEvent(new Event("change"));
+        await tick();
+        assert(
+          race.dataset.theme === "dark",
+          "Initial storage read cannot override a manual change",
+        );
+        const host = document.createElement("div");
+        document.body.append(host);
+        const root = host.attachShadow({ mode: "open" });
+        root.innerHTML = `<style>${ChatSweeperUI.styles}</style>${ChatSweeperUI.shells.ChatGPT}`;
+        const darkSelect = root.getElementById("theme");
+        ChatSweeperTheme.mount(host, darkSelect);
+        await tick();
+        assert(
+          getComputedStyle(host)
+            .getPropertyValue("--card")
+            .trim()
+            .toUpperCase() === "#18181F",
+          "Shadow DOM receives the screenshot palette",
+        );
+        assert(
+          root.getElementById("panel").getAttribute("aria-label") ===
+            "ChatSweeper for ChatGPT",
+          "Brand and provider accessibility label",
+        );
+        assert(
+          root.textContent.includes("Select. Manage. Keep or Sweep."),
+          "Subtitle present",
+        );
+        assert(
+          root.querySelectorAll("svg.lucide").length >= 10,
+          "Bundled Lucide icons present",
+        );
+        root.getElementById("panel").hidden = false;
+        assert(
+          getComputedStyle(root.getElementById("panel")).backgroundColor ===
+            "rgb(24, 24, 31)",
+          "Actual panel matches the screenshot surface",
+        );
+        assert(
+          getComputedStyle(root.getElementById("systemStatus"))
+            .backgroundColor === "rgba(0, 0, 0, 0)",
+          "Status panel is transparent",
+        );
+        assert(
+          getComputedStyle(root.getElementById("selection")).color ===
+            "rgb(167, 139, 250)",
+          "Selected total uses the bright purple accent",
+        );
+        assert(
+          getComputedStyle(root.querySelector("dialog a")).color ===
+            "rgb(167, 139, 250)",
+          "Dark About links stay readable",
+        );
+        const selectedRow = document.createElement("div");
+        selectedRow.className = "chat";
+        selectedRow.innerHTML = '<input type="checkbox" checked>';
+        root.getElementById("list").append(selectedRow);
+        assert(
+          getComputedStyle(selectedRow).backgroundColor === "rgb(48, 39, 64)" &&
+            getComputedStyle(selectedRow).borderTopColor ===
+              "rgb(167, 139, 250)",
+          "Selected chats use dark purple with a bright purple border",
+        );
+        darkSelect.value = "light";
+        darkSelect.dispatchEvent(new Event("change"));
+        assert(
+          getComputedStyle(root.getElementById("panel")).backgroundColor ===
+            "rgb(255, 255, 255)",
+          "Actual panel uses light card colour",
+        );
+        assert(
+          !root.getElementById("dateDetails") &&
+            !root.getElementById("projects"),
+          "Date and project sections are omitted",
+        );
+        assert(
+          parseFloat(
+            getComputedStyle(root.getElementById("search")).fontSize,
+          ) >= 14,
+          "Search text is legible",
+        );
+        assert(
+          parseFloat(
+            getComputedStyle(root.getElementById("filter")).fontSize,
+          ) >= 14,
+          "Dropdown text is legible",
+        );
+        const closeStyle = getComputedStyle(root.getElementById("close"));
+        assert(
+          parseFloat(closeStyle.borderTopWidth) >= 1 &&
+            closeStyle.borderTopStyle === "solid",
+          "Close button has a visible box",
+        );
+        assert(
+          getComputedStyle(root.getElementById("filter")).borderTopColor ===
+            "rgb(138, 143, 156)",
+          "Light input borders use the stronger contrast colour",
+        );
+        assert(
+          root.getElementById("search").getAttribute("aria-label") ===
+            "Search chat titles",
+          "Search label retained",
+        );
+        const fallback = document.createElement("div"),
+          fallbackSelect = select.cloneNode(true);
+        document.body.append(fallback, fallbackSelect);
+        ChatSweeperTheme.mount(fallback, fallbackSelect, undefined, {
+          key: "chatsweeper:start-theme",
+        });
+        await tick();
+        fallbackSelect.value = "dark";
+        fallbackSelect.dispatchEvent(new Event("change"));
+        await tick();
+        assert(
+          storageFixture.data["chatsweeper:start-theme"] === "dark" &&
+            host.dataset.theme === "light",
+          "Fallback theme changes do not change the panel",
+        );
+        darkSelect.value = "dark";
+        darkSelect.dispatchEvent(new Event("change"));
+        await tick();
+        fallbackSelect.value = "light";
+        fallbackSelect.dispatchEvent(new Event("change"));
+        await tick();
+        assert(
+          host.dataset.theme === "dark" && fallback.dataset.theme === "light",
+          "Panel and fallback retain independent themes",
+        );
+        document.getElementById("result").textContent =
+          `PASS: ${checks} theme and branding checks`;
+      } catch (error) {
+        document.getElementById("result").textContent = "FAIL: " + error.stack;
+      }
+    })();
+  </script>
+</body>

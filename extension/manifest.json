@@ -6,10 +6,7 @@
   "description": "Select. Manage. Keep or Sweep. Find, protect and delete Gemini and ChatGPT chats with visible progress.",
   "author": "Mikaela Marie Punzalan",
   "homepage_url": "https://github.com/okmikaelaok/chat-sweeper",
-  "permissions": [
-    "activeTab",
-    "storage"
-  ],
+  "permissions": ["activeTab", "storage"],
   "action": {
     "default_title": "ChatSweeper — Select. Manage. Keep or Sweep.",
     "default_icon": {
